@@ -66,6 +66,8 @@ jobs:
       # Step 4 — PyInstaller
       # -------------------------------------------------------------------------
       - name: Bundle Python backend (PyInstaller)
+        env:
+          SECRET_KEY: build-placeholder
         run: |
           cd backend
           pyinstaller lexi-path-server.spec --noconfirm
