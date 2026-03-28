@@ -1,0 +1,44 @@
+{
+  "name": "lexi-path-desktop",
+  "version": "1.0.0",
+  "description": "LexiPath — offline learning path desktop app",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^34.0.0",
+    "electron-builder": "^25.0.0"
+  },
+  "build": {
+    "appId": "com.lexipath.desktop",
+    "productName": "LexiPath",
+
+    "extraResources": [
+      {
+        "from": "../backend/dist/lexi-path-server",
+        "to": "backend/lexi-path-server",
+        "filter": ["**/*"]
+      }
+    ],
+
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.ico"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "assets/icon.icns"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "assets/icon.png"
+    },
+
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}
