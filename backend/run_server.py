@@ -64,6 +64,11 @@ def main():
     from django.core.management import call_command
     call_command('migrate', verbosity=0)
 
+    # Reset any items that were left in 'downloading' state from a previous session.
+    # This can happen if the app was closed while a download was in progress.
+    from apps.paths.models import LearningPathItem
+    LearningPathItem.objects.filter(download_status='downloading').update(download_status='error')
+
     from waitress import serve
     from config.wsgi import application
 
