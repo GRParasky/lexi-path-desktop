@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import client from '../api/client'
 
 export default function VideoCard({
@@ -15,6 +16,7 @@ export default function VideoCard({
   onDrop,
   isDragOver,
 }) {
+  const { t } = useTranslation()
   const [theater, setTheater] = useState(false)
   const [toggling, setToggling] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -146,20 +148,20 @@ export default function VideoCard({
         onDragEnd={() => { justDragged.current = true; setTimeout(() => { justDragged.current = false }, 100) }}
         onDragOver={(e) => { e.preventDefault(); onDragOver?.() }}
         onDrop={(e) => { e.preventDefault(); onDrop?.() }}
-        title={draggable ? 'Drag to reorder · Click to open' : 'Open in theater mode'}
+        title={draggable ? t('video.dragToReorder') : t('video.openTheater')}
       >
         <div className="video-card__thumb">
           <img src={item.thumbnail_url} alt={item.title} />
           <div className="play-overlay">▶</div>
           {/* Badge visible on the card so the user knows which videos are cached */}
           {hasLocalFile && (
-            <span className="offline-badge" title="Available offline">⬇ Offline</span>
+            <span className="offline-badge" title={t('video.offlineAvailable')}>{t('video.offlineBadge')}</span>
           )}
         </div>
         <div className="video-card__body">
           <p className="video-card__pos">#{item.position + 1}</p>
           <h3 className="video-card__title">{item.title}</h3>
-          {isCompleted && <span className="card-done-badge">✓ Done</span>}
+          {isCompleted && <span className="card-done-badge">{t('video.doneBadge')}</span>}
         </div>
       </div>
 
@@ -213,7 +215,7 @@ export default function VideoCard({
                 ) : (
                   <h2
                     className={`theater-title ${!readOnly ? 'editable-field' : ''}`}
-                    title={!readOnly ? 'Click to edit title' : undefined}
+                    title={!readOnly ? t('video.clickToEditTitle') : undefined}
                     onClick={() => { if (!readOnly) { setTitleDraft(item.title); setEditingTitle(true) } }}
                   >
                     {item.title}
@@ -226,29 +228,29 @@ export default function VideoCard({
                   {/* Offline download controls */}
                   <div className="offline-controls">
                     {downloadStatus === 'none' && (
-                      <button className="btn-ghost-sm" onClick={handleDownload} title="Download for offline playback">
-                        ⬇ Download
+                      <button className="btn-ghost-sm" onClick={handleDownload} title={t('video.downloadTitle')}>
+                        {t('video.download')}
                       </button>
                     )}
                     {downloadStatus === 'downloading' && (
                       <span className="offline-status offline-status--downloading">
                         <span className="spinner-sm" />
-                        {downloadProgress !== null ? `${downloadProgress}%` : 'Downloading…'}
+                        {downloadProgress !== null ? `${downloadProgress}%` : t('video.downloading')}
                       </span>
                     )}
                     {downloadStatus === 'done' && (
                       <>
-                        <span className="offline-status offline-status--done">✓ Offline</span>
-                        <button className="btn-ghost-sm" onClick={handleRemoveOffline} title="Delete local file">
-                          Remove
+                        <span className="offline-status offline-status--done">{t('video.offlineDone')}</span>
+                        <button className="btn-ghost-sm" onClick={handleRemoveOffline} title={t('video.removeTitle')}>
+                          {t('video.remove')}
                         </button>
                       </>
                     )}
                     {downloadStatus === 'error' && (
                       <>
-                        <span className="offline-status offline-status--error">Download failed</span>
+                        <span className="offline-status offline-status--error">{t('video.downloadFailed')}</span>
                         <button className="btn-ghost-sm" onClick={handleDownload}>
-                          Retry
+                          {t('video.retry')}
                         </button>
                       </>
                     )}
@@ -259,22 +261,22 @@ export default function VideoCard({
                     onClick={handleToggle}
                     disabled={toggling}
                   >
-                    {isCompleted ? '✓ Done' : 'Mark complete'}
+                    {isCompleted ? t('video.doneBadge') : t('video.markComplete')}
                   </button>
 
                   {confirmDelete ? (
                     <div className="delete-confirm">
-                      <span>Remove this video?</span>
+                      <span>{t('video.removeVideo')}</span>
                       <button className="btn-danger-sm" onClick={handleDelete} disabled={deleting}>
-                        {deleting ? '…' : 'Yes, delete'}
+                        {deleting ? '…' : t('video.yesDelete')}
                       </button>
                       <button className="btn-ghost-sm" onClick={() => setConfirmDelete(false)}>
-                        Cancel
+                        {t('common.cancel')}
                       </button>
                     </div>
                   ) : (
                     <button className="btn-ghost-sm btn-ghost-sm--danger" onClick={() => setConfirmDelete(true)}>
-                      Delete
+                      {t('common.delete')}
                     </button>
                   )}
                 </div>

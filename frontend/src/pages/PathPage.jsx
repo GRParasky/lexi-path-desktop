@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useTranslation, Trans } from 'react-i18next'
 import client from '../api/client'
 import ProgressBar from '../components/ProgressBar'
 import VideoCard from '../components/VideoCard'
@@ -7,6 +8,7 @@ import VideoCard from '../components/VideoCard'
 export default function PathPage() {
   const { id } = useParams()           // /paths/:id
   const navigate = useNavigate()
+  const { t } = useTranslation()
 
   const [path, setPath] = useState(null)
   const [completedIds, setCompletedIds] = useState(new Set())
@@ -192,13 +194,13 @@ export default function PathPage() {
       setShowAddForm(false)
     } catch (err) {
       const data = err.response?.data
-      setAddError(data?.youtube_url?.[0] || data?.detail || 'Failed to add video.')
+      setAddError(data?.youtube_url?.[0] || data?.detail || t('path.addVideoError'))
     } finally {
       setAdding(false)
     }
   }
 
-  if (loading) return <div className="page-loading">Loading…</div>
+  if (loading) return <div className="page-loading">{t('common.loading')}</div>
   if (!path) return null
 
   const total = path.items.length
@@ -209,7 +211,7 @@ export default function PathPage() {
     <div className="path-page">
       {/* Header */}
       <header className="path-header">
-        <Link to="/dashboard" className="back-link">← Dashboard</Link>
+        <Link to="/dashboard" className="back-link">{t('path.back')}</Link>
         <div className="path-header__meta">
           {editingTitle ? (
             <input
@@ -223,7 +225,7 @@ export default function PathPage() {
           ) : (
             <h1
               className="editable-field"
-              title="Click to edit"
+              title={t('path.clickToEdit')}
               onClick={() => { setTitleDraft(path.title); setEditingTitle(true) }}
             >
               {path.title}
@@ -242,22 +244,22 @@ export default function PathPage() {
           ) : (
             <p
               className={`path-description editable-field ${!path.description ? 'editable-field--empty' : ''}`}
-              title="Click to edit"
+              title={t('path.clickToEdit')}
               onClick={() => { setDescDraft(path.description ?? ''); setEditingDesc(true) }}
             >
-              {path.description || 'Add a description…'}
+              {path.description || t('path.addDescription')}
             </p>
           )}
         </div>
         <div className="path-header__actions">
           <button className="btn-ghost" onClick={() => setShowSharePanel((v) => !v)}>
-            Share
+            {t('path.share')}
           </button>
           <button className="btn-ghost" onClick={() => { setCloneName(path.title); setShowCloneDialog(true) }}>
-            Clone
+            {t('common.clone')}
           </button>
           <button className="btn-ghost btn-ghost--danger" onClick={() => setShowDeleteDialog(true)}>
-            Delete
+            {t('common.delete')}
           </button>
           <button
             className="btn-primary"
@@ -270,7 +272,7 @@ export default function PathPage() {
               setShowAddForm((v) => !v)
             }}
           >
-            {showAddForm ? 'Cancel' : '+ Add video'}
+            {showAddForm ? t('common.cancel') : t('path.addVideo')}
           </button>
         </div>
       </header>
@@ -280,7 +282,7 @@ export default function PathPage() {
         <div className="share-panel">
           <div className="share-panel__row">
             <span className="share-panel__label">
-              {path.is_public ? 'Public — anyone with the link can view' : 'Private — only you can see this'}
+              {path.is_public ? t('path.publicLabel') : t('path.privateLabel')}
             </span>
             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
               <button
@@ -288,16 +290,16 @@ export default function PathPage() {
                 onClick={handleTogglePublic}
                 disabled={togglingPublic}
               >
-                {togglingPublic ? '…' : path.is_public ? 'Make private' : 'Make public'}
+                {togglingPublic ? '…' : path.is_public ? t('path.makePrivate') : t('path.makePublic')}
               </button>
-              <button className="share-panel__close" onClick={() => setShowSharePanel(false)} title="Close">✕</button>
+              <button className="share-panel__close" onClick={() => setShowSharePanel(false)} title={t('common.cancel')}>✕</button>
             </div>
           </div>
           {path.is_public && (
             <div className="share-panel__row">
               <span className="share-link">{window.location.origin}/shared/{path.share_token}</span>
               <button className="btn-ghost" onClick={handleCopyLink}>
-                {copied ? '✓ Copied!' : 'Copy link'}
+                {copied ? t('path.copied') : t('path.copyLink')}
               </button>
             </div>
           )}
@@ -308,7 +310,7 @@ export default function PathPage() {
       {total > 0 && (
         <div className="path-progress">
           <ProgressBar percentage={percentage} />
-          <span className="progress-count">{completed} / {total} videos</span>
+          <span className="progress-count">{t('path.progressCount', { completed, total })}</span>
         </div>
       )}
 
@@ -316,13 +318,13 @@ export default function PathPage() {
       {showAddForm && (
         <form onSubmit={handleAddVideo} className="add-video-form">
           <div className="field">
-            <label>YouTube URL</label>
+            <label>{t('path.youtubeUrl')}</label>
             <div className="input-clearable">
               <input
                 type="text"
                 value={youtubeUrl}
                 onChange={(e) => setYoutubeUrl(e.target.value)}
-                placeholder="https://www.youtube.com/watch?v=..."
+                placeholder={t('path.youtubePlaceholder')}
                 required
                 autoFocus
               />
@@ -332,18 +334,18 @@ export default function PathPage() {
             </div>
           </div>
           <div className="field">
-            <label>Title</label>
+            <label>{t('path.titleLabel')}</label>
             <input
               type="text"
               value={videoTitle}
               onChange={(e) => setVideoTitle(e.target.value)}
-              placeholder="e.g. Introduction to Models"
+              placeholder={t('path.titlePlaceholder')}
               required
             />
           </div>
           {addError && <p className="error">{addError}</p>}
           <button type="submit" className="btn-primary" disabled={adding}>
-            {adding ? 'Adding…' : 'Add video'}
+            {adding ? t('path.adding') : t('path.addVideoBtn')}
           </button>
         </form>
       )}
@@ -352,16 +354,20 @@ export default function PathPage() {
       {showDeleteDialog && (
         <div className="theater-backdrop" onClick={(e) => { if (e.target === e.currentTarget) setShowDeleteDialog(false) }}>
           <div className="clone-dialog">
-            <h3>Delete learning path</h3>
+            <h3>{t('path.deleteDialog.title')}</h3>
             <p className="muted" style={{ fontSize: '0.875rem', margin: '0.75rem 0 1.25rem' }}>
-              This will permanently delete <strong style={{ color: 'var(--text)' }}>{path.title}</strong> and all its videos. This cannot be undone.
+              <Trans
+                i18nKey="path.deleteDialog.description"
+                values={{ title: path.title }}
+                components={{ strong: <strong style={{ color: 'var(--text)' }} /> }}
+              />
             </p>
             <div className="clone-dialog__actions">
               <button className="btn-ghost" onClick={() => setShowDeleteDialog(false)}>
-                Cancel
+                {t('common.cancel')}
               </button>
               <button className="btn-primary btn-primary--danger" onClick={handleDeletePath} disabled={deletingPath}>
-                {deletingPath ? 'Deleting…' : 'Delete permanently'}
+                {deletingPath ? t('path.deleteDialog.deleting') : t('path.deleteDialog.confirm')}
               </button>
             </div>
           </div>
@@ -372,12 +378,12 @@ export default function PathPage() {
       {showCloneDialog && (
         <div className="theater-backdrop" onClick={(e) => { if (e.target === e.currentTarget) setShowCloneDialog(false) }}>
           <form className="clone-dialog" onSubmit={handleClone}>
-            <h3>Clone learning path</h3>
+            <h3>{t('common.cloneDialog.title')}</h3>
             <p className="muted" style={{ fontSize: '0.875rem', marginBottom: '1rem' }}>
-              Give your copy a name.
+              {t('common.cloneDialog.description')}
             </p>
             <div className="field">
-              <label>Name</label>
+              <label>{t('common.name')}</label>
               <input
                 type="text"
                 value={cloneName}
@@ -388,10 +394,10 @@ export default function PathPage() {
             </div>
             <div className="clone-dialog__actions">
               <button type="button" className="btn-ghost" onClick={() => setShowCloneDialog(false)}>
-                Cancel
+                {t('common.cancel')}
               </button>
               <button type="submit" className="btn-primary" disabled={cloning}>
-                {cloning ? 'Cloning…' : 'Clone'}
+                {cloning ? t('common.cloning') : t('common.clone')}
               </button>
             </div>
           </form>
@@ -407,13 +413,13 @@ export default function PathPage() {
             <path d="M20 50h24" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
             <path d="M32 44v6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
           </svg>
-          <h3 className="empty-state__title">No videos yet</h3>
-          <p className="empty-state__desc">Add your first YouTube video and start building this learning path.</p>
+          <h3 className="empty-state__title">{t('path.empty.title')}</h3>
+          <p className="empty-state__desc">{t('path.empty.description')}</p>
           <button
             className="btn-primary empty-state__cta"
             onClick={() => { setShowAddForm(true); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
           >
-            + Add your first video
+            {t('path.empty.cta')}
           </button>
         </div>
       ) : (

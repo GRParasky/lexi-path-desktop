@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import client from '../api/client'
+import LanguageSelector from '../components/LanguageSelector'
 
 export default function DashboardPage() {
   const [paths, setPaths] = useState([])
@@ -10,6 +12,7 @@ export default function DashboardPage() {
   const [showForm, setShowForm] = useState(false)
 
   const navigate = useNavigate()
+  const { t } = useTranslation()
 
   useEffect(() => {
     client.get('/paths/')
@@ -35,13 +38,16 @@ export default function DashboardPage() {
     <div className="dashboard">
       <header className="dashboard-header">
         <h1>LexiPath</h1>
+        <div className="header-actions">
+          <LanguageSelector />
+        </div>
       </header>
 
       <main className="dashboard-main">
         <div className="section-header">
-          <h2>My Learning Paths</h2>
+          <h2>{t('dashboard.title')}</h2>
           <button onClick={() => setShowForm((v) => !v)} className="btn-primary">
-            {showForm ? 'Cancel' : '+ New path'}
+            {showForm ? t('common.cancel') : t('dashboard.newPath')}
           </button>
         </div>
 
@@ -51,18 +57,18 @@ export default function DashboardPage() {
               type="text"
               value={newTitle}
               onChange={(e) => setNewTitle(e.target.value)}
-              placeholder="e.g. Django for Beginners"
+              placeholder={t('dashboard.placeholder')}
               autoFocus
               required
             />
             <button type="submit" disabled={creating} className="btn-primary">
-              {creating ? 'Creating…' : 'Create'}
+              {creating ? t('dashboard.creating') : t('dashboard.create')}
             </button>
           </form>
         )}
 
         {loading ? (
-          <p className="muted">Loading…</p>
+          <p className="muted">{t('common.loading')}</p>
         ) : paths.length === 0 ? (
           <div className="empty-state">
             <svg className="empty-state__icon" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -73,10 +79,10 @@ export default function DashboardPage() {
               <circle cx="32" cy="48" r="6" stroke="currentColor" strokeWidth="2" strokeDasharray="3 3"/>
               <path d="M26 32h-2M40 32h-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeDasharray="3 3"/>
             </svg>
-            <h3 className="empty-state__title">Your learning journey starts here</h3>
-            <p className="empty-state__desc">Create your first path and start collecting YouTube videos into a focused, distraction-free flow.</p>
+            <h3 className="empty-state__title">{t('dashboard.empty.title')}</h3>
+            <p className="empty-state__desc">{t('dashboard.empty.description')}</p>
             <button className="btn-primary empty-state__cta" onClick={() => setShowForm(true)}>
-              + Create your first path
+              {t('dashboard.empty.cta')}
             </button>
           </div>
         ) : (
@@ -89,8 +95,8 @@ export default function DashboardPage() {
               >
                 <h3>{path.title}</h3>
                 <p className="path-meta">
-                  {path.items.length} video{path.items.length !== 1 ? 's' : ''}
-                  {path.is_public && <span className="badge">Public</span>}
+                  {t('dashboard.videoCount', { count: path.items.length })}
+                  {path.is_public && <span className="badge">{t('dashboard.public')}</span>}
                 </p>
               </div>
             ))}

@@ -1,0 +1,104 @@
+{
+  "common": {
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "loading": "Loading…",
+    "clone": "Clone",
+    "cloning": "Cloning…",
+    "name": "Name",
+    "cloneDialog": {
+      "title": "Clone learning path",
+      "description": "Give your copy a name."
+    }
+  },
+  "dashboard": {
+    "title": "My Learning Paths",
+    "newPath": "+ New path",
+    "creating": "Creating…",
+    "create": "Create",
+    "placeholder": "e.g. Django for Beginners",
+    "public": "Public",
+    "videoCount_one": "{{count}} video",
+    "videoCount_other": "{{count}} videos",
+    "empty": {
+      "title": "Your learning journey starts here",
+      "description": "Create your first path and start collecting YouTube videos into a focused, distraction-free flow.",
+      "cta": "+ Create your first path"
+    }
+  },
+  "path": {
+    "back": "← Dashboard",
+    "clickToEdit": "Click to edit",
+    "addDescription": "Add a description…",
+    "share": "Share",
+    "addVideo": "+ Add video",
+    "publicLabel": "Public — anyone with the link can view",
+    "privateLabel": "Private — only you can see this",
+    "makePrivate": "Make private",
+    "makePublic": "Make public",
+    "copyLink": "Copy link",
+    "copied": "✓ Copied!",
+    "youtubeUrl": "YouTube URL",
+    "youtubePlaceholder": "https://www.youtube.com/watch?v=...",
+    "titleLabel": "Title",
+    "titlePlaceholder": "e.g. Introduction to Models",
+    "addVideoError": "Failed to add video.",
+    "adding": "Adding…",
+    "addVideoBtn": "Add video",
+    "progressCount": "{{completed}} / {{total}} videos",
+    "deleteDialog": {
+      "title": "Delete learning path",
+      "description": "This will permanently delete <strong>{{title}}</strong> and all its videos. This cannot be undone.",
+      "confirm": "Delete permanently",
+      "deleting": "Deleting…"
+    },
+    "empty": {
+      "title": "No videos yet",
+      "description": "Add your first YouTube video and start building this learning path.",
+      "cta": "+ Add your first video"
+    }
+  },
+  "shared": {
+    "badge": "Shared path · read-only",
+    "by": "by {{author}}",
+    "cloneToMyPaths": "Clone to my paths",
+    "videoCount_one": "{{count}} video",
+    "videoCount_other": "{{count}} videos",
+    "notFound": {
+      "title": "Path not found",
+      "description": "This link may be invalid or the path is no longer public."
+    },
+    "authDialog": {
+      "title": "Sign in to clone",
+      "description": "You need an account to save this path. Your chosen name is already saved — just sign in or create an account and we'll clone it automatically.",
+      "signUp": "Sign up",
+      "logIn": "Log in"
+    },
+    "empty": {
+      "title": "Nothing here yet",
+      "description": "The author hasn't added any videos to this path yet."
+    }
+  },
+  "video": {
+    "dragToReorder": "Drag to reorder · Click to open",
+    "openTheater": "Open in theater mode",
+    "offlineBadge": "⬇ Offline",
+    "offlineAvailable": "Available offline",
+    "doneBadge": "✓ Done",
+    "clickToEditTitle": "Click to edit title",
+    "download": "⬇ Download",
+    "downloadTitle": "Download for offline playback",
+    "downloading": "Downloading…",
+    "offlineDone": "✓ Offline",
+    "remove": "Remove",
+    "removeTitle": "Delete local file",
+    "downloadFailed": "Download failed",
+    "retry": "Retry",
+    "markComplete": "Mark complete",
+    "removeVideo": "Remove this video?",
+    "yesDelete": "Yes, delete"
+  },
+  "progress": {
+    "complete": "{{percentage}}% complete"
+  }
+}

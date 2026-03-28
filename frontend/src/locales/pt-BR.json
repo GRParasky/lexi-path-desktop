@@ -1,0 +1,104 @@
+{
+  "common": {
+    "cancel": "Cancelar",
+    "delete": "Excluir",
+    "loading": "Carregando…",
+    "clone": "Clonar",
+    "cloning": "Clonando…",
+    "name": "Nome",
+    "cloneDialog": {
+      "title": "Clonar caminho de aprendizado",
+      "description": "Dê um nome para sua cópia."
+    }
+  },
+  "dashboard": {
+    "title": "Meus Caminhos de Aprendizado",
+    "newPath": "+ Novo caminho",
+    "creating": "Criando…",
+    "create": "Criar",
+    "placeholder": "ex.: Django para Iniciantes",
+    "public": "Público",
+    "videoCount_one": "{{count}} vídeo",
+    "videoCount_other": "{{count}} vídeos",
+    "empty": {
+      "title": "Sua jornada de aprendizado começa aqui",
+      "description": "Crie seu primeiro caminho e comece a reunir vídeos do YouTube em um fluxo focado, sem distrações.",
+      "cta": "+ Criar meu primeiro caminho"
+    }
+  },
+  "path": {
+    "back": "← Início",
+    "clickToEdit": "Clique para editar",
+    "addDescription": "Adicionar uma descrição…",
+    "share": "Compartilhar",
+    "addVideo": "+ Adicionar vídeo",
+    "publicLabel": "Público — qualquer pessoa com o link pode ver",
+    "privateLabel": "Privado — apenas você pode ver",
+    "makePrivate": "Tornar privado",
+    "makePublic": "Tornar público",
+    "copyLink": "Copiar link",
+    "copied": "✓ Copiado!",
+    "youtubeUrl": "URL do YouTube",
+    "youtubePlaceholder": "https://www.youtube.com/watch?v=...",
+    "titleLabel": "Título",
+    "titlePlaceholder": "ex.: Introdução aos Modelos",
+    "addVideoError": "Falha ao adicionar vídeo.",
+    "adding": "Adicionando…",
+    "addVideoBtn": "Adicionar vídeo",
+    "progressCount": "{{completed}} / {{total}} vídeos",
+    "deleteDialog": {
+      "title": "Excluir caminho de aprendizado",
+      "description": "Isso excluirá permanentemente <strong>{{title}}</strong> e todos os seus vídeos. Essa ação não pode ser desfeita.",
+      "confirm": "Excluir permanentemente",
+      "deleting": "Excluindo…"
+    },
+    "empty": {
+      "title": "Nenhum vídeo ainda",
+      "description": "Adicione seu primeiro vídeo do YouTube e comece a construir este caminho.",
+      "cta": "+ Adicionar meu primeiro vídeo"
+    }
+  },
+  "shared": {
+    "badge": "Caminho compartilhado · somente leitura",
+    "by": "por {{author}}",
+    "cloneToMyPaths": "Clonar para meus caminhos",
+    "videoCount_one": "{{count}} vídeo",
+    "videoCount_other": "{{count}} vídeos",
+    "notFound": {
+      "title": "Caminho não encontrado",
+      "description": "Este link pode ser inválido ou o caminho não é mais público."
+    },
+    "authDialog": {
+      "title": "Entre para clonar",
+      "description": "Você precisa de uma conta para salvar este caminho. O nome escolhido já está salvo — basta entrar ou criar uma conta e clonaremos automaticamente.",
+      "signUp": "Cadastrar",
+      "logIn": "Entrar"
+    },
+    "empty": {
+      "title": "Nada aqui ainda",
+      "description": "O autor ainda não adicionou vídeos a este caminho."
+    }
+  },
+  "video": {
+    "dragToReorder": "Arraste para reordenar · Clique para abrir",
+    "openTheater": "Abrir no modo cinema",
+    "offlineBadge": "⬇ Offline",
+    "offlineAvailable": "Disponível offline",
+    "doneBadge": "✓ Concluído",
+    "clickToEditTitle": "Clique para editar o título",
+    "download": "⬇ Baixar",
+    "downloadTitle": "Baixar para reprodução offline",
+    "downloading": "Baixando…",
+    "offlineDone": "✓ Offline",
+    "remove": "Remover",
+    "removeTitle": "Excluir arquivo local",
+    "downloadFailed": "Falha no download",
+    "retry": "Tentar novamente",
+    "markComplete": "Marcar como concluído",
+    "removeVideo": "Remover este vídeo?",
+    "yesDelete": "Sim, excluir"
+  },
+  "progress": {
+    "complete": "{{percentage}}% concluído"
+  }
+}
