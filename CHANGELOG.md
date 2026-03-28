@@ -4,6 +4,18 @@ All notable changes to LexiPath Desktop are documented here.
 
 ---
 
+## [1.0.4] — 2026-03-28
+
+### Fixed
+- Learning paths (and all other API calls) would silently fail after the JWT access token expired (60-minute lifetime). The axios response interceptor now re-authenticates transparently on 401: it calls `GET /api/auth/auto-login/`, stores the fresh token pair, and retries the original request — the user never sees an error or loses their work in progress.
+
+### Technical notes
+- The retry uses bare `axios` (not the `client` instance) to call `auto-login`, ensuring the interceptor does not trigger itself recursively
+- A `_retry` flag on the original request config prevents infinite loops if `auto-login` itself returns an unexpected error
+- Covers all expiry scenarios: token expiring mid-session and stale tokens on app re-open (e.g. using the app again after more than an hour)
+
+---
+
 ## [1.0.3] — 2026-03-28
 
 ### Added
