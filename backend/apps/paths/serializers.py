@@ -44,6 +44,20 @@ class LearningPathItemSerializer(serializers.ModelSerializer):
         validated_data['thumbnail_url'] = build_thumbnail_url(video_id)
         return super().create(validated_data)
 
+    def update(self, instance, validated_data):
+        new_url = validated_data.get('youtube_url')
+        if new_url and new_url != instance.youtube_url:
+            # Re-derive video identity fields from the new URL
+            video_id = extract_youtube_video_id(new_url)
+            validated_data['video_id'] = video_id
+            validated_data['thumbnail_url'] = build_thumbnail_url(video_id)
+            # The previously downloaded file (if any) belongs to the old video —
+            # clear the reference so the frontend shows the correct state.
+            # The file itself is left on disk; it becomes orphaned but harmless.
+            instance.download_status = LearningPathItem.DOWNLOAD_NONE
+            instance.local_file_path = ''
+        return super().update(instance, validated_data)
+
 
 class LearningPathSerializer(serializers.ModelSerializer):
     # Nested read: items are embedded in the path response

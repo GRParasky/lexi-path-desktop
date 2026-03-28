@@ -125,15 +125,17 @@ export default function PathPage() {
     }
   }
 
-  const handleEditTitle = async (itemId, newTitle) => {
-    setPath((prev) => ({
-      ...prev,
-      items: prev.items.map((i) => i.id === itemId ? { ...i, title: newTitle } : i),
-    }))
+  const handleEditItem = async (itemId, fields) => {
     try {
-      await client.patch(`/paths/${id}/items/${itemId}/`, { title: newTitle })
+      const { data } = await client.patch(`/paths/${id}/items/${itemId}/`, fields)
+      // Always update from the response — when youtube_url changes the backend
+      // rewrites video_id and thumbnail_url, so we need the full updated item.
+      setPath((prev) => ({
+        ...prev,
+        items: prev.items.map((i) => i.id === itemId ? { ...i, ...data } : i),
+      }))
     } catch {
-      // revert on error — re-fetch is overkill, just restore from original
+      // silently ignore — stale data stays until next reload
     }
   }
 
@@ -431,7 +433,7 @@ export default function PathPage() {
               isCompleted={completedIds.has(item.id)}
               onToggleComplete={handleToggleComplete}
               onDelete={handleDeleteItem}
-              onEditTitle={handleEditTitle}
+              onEditItem={handleEditItem}
               readOnly={false}
               draggable={true}
               onDragStart={() => setDraggedId(item.id)}

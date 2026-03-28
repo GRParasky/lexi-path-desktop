@@ -344,6 +344,7 @@ input:focus { outline: none; border-color: var(--accent); }
   flex-direction: column;
   transition: border-color 0.15s;
   cursor: pointer;
+  position: relative;
 }
 .video-card:hover { border-color: var(--accent); }
 .video-card--done { border-color: #3a3a50; opacity: 0.75; }
@@ -386,6 +387,80 @@ input:focus { outline: none; border-color: var(--accent); }
 .video-card__body { padding: 0.85rem; flex: 1; display: flex; flex-direction: column; gap: 0.4rem; }
 .video-card__pos { font-size: 0.7rem; color: var(--muted); }
 .video-card__title { font-size: 0.875rem; line-height: 1.4; flex: 1; }
+
+/* Hover action buttons (pencil + trash) */
+.card-actions {
+  display: flex;
+  gap: 0.35rem;
+  opacity: 0;
+  transition: opacity 0.15s;
+  margin-top: auto;
+  padding-top: 0.4rem;
+}
+.video-card:hover .card-actions { opacity: 1; }
+.card-action-btn {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.8rem;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) - 2px);
+  color: var(--text);
+  cursor: pointer;
+  line-height: 1;
+  transition: background 0.15s, border-color 0.15s;
+}
+.card-action-btn:hover { background: var(--surface-hover); border-color: var(--accent); }
+.card-action-btn--danger:hover { border-color: var(--danger); color: var(--danger); }
+
+/* Card-level overlay (quick edit / delete confirm) */
+.card-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: rgba(10, 10, 20, 0.92);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  border-radius: var(--radius);
+}
+.card-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+}
+.card-edit-input {
+  width: 100%;
+  padding: 0.4rem 0.6rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) - 2px);
+  color: var(--text);
+  font-size: 0.8rem;
+  box-sizing: border-box;
+}
+.card-edit-input:focus { outline: none; border-color: var(--accent); }
+.card-edit-error { font-size: 0.72rem; color: var(--danger); }
+.card-edit-actions,
+.card-confirm-actions {
+  display: flex;
+  gap: 0.4rem;
+  justify-content: flex-end;
+}
+.card-confirm { text-align: center; width: 100%; }
+.card-confirm p { font-size: 0.85rem; margin-bottom: 0.75rem; }
+.btn-primary-sm {
+  padding: 0.3rem 0.75rem;
+  font-size: 0.8rem;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: calc(var(--radius) - 2px);
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.btn-primary-sm:hover { opacity: 0.85; }
 
 .btn-complete {
   padding: 0.4rem 0.75rem;

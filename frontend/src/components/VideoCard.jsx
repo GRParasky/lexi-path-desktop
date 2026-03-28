@@ -2,12 +2,16 @@ import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import client from '../api/client'
 
+// Basic YouTube URL check — mirrors the backend's extract_youtube_video_id logic.
+// Only used for client-side feedback before the request is sent.
+const YOUTUBE_URL_RE = /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)[\w-]+/
+
 export default function VideoCard({
   item,
   isCompleted,
   onToggleComplete,
   onDelete,
-  onEditTitle,
+  onEditItem,
   readOnly,
   // drag-and-drop
   draggable,
@@ -19,12 +23,24 @@ export default function VideoCard({
   const { t } = useTranslation()
   const [theater, setTheater] = useState(false)
   const [toggling, setToggling] = useState(false)
+
+  // Theater-level delete confirm
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
-  // Inline title edit (inside theater modal)
+  // Theater-level inline title edit
   const [editingTitle, setEditingTitle] = useState(false)
   const [titleDraft, setTitleDraft] = useState('')
+
+  // Card-level quick edit (pencil hover button)
+  const [cardEditing, setCardEditing] = useState(false)
+  const [cardTitleDraft, setCardTitleDraft] = useState('')
+  const [cardUrlDraft, setCardUrlDraft] = useState('')
+  const [cardUrlError, setCardUrlError] = useState(null)
+
+  // Card-level delete confirm (trash hover button)
+  const [cardConfirmDelete, setCardConfirmDelete] = useState(false)
+  const [cardDeleting, setCardDeleting] = useState(false)
 
   // Offline video state — initialised from the API response.
   // download_status: 'none' | 'downloading' | 'done' | 'error'
@@ -41,13 +57,21 @@ export default function VideoCard({
   // Prevent card click from opening theater right after a drag ends
   const justDragged = useRef(false)
 
-  // Close on Escape key
+  // Close theater on Escape
   useEffect(() => {
     if (!theater) return
     const onKey = (e) => { if (e.key === 'Escape') setTheater(false) }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [theater])
+
+  // Close card edit on Escape
+  useEffect(() => {
+    if (!cardEditing) return
+    const onKey = (e) => { if (e.key === 'Escape') setCardEditing(false) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [cardEditing])
 
   // Poll the download status every 2 s while a download is in progress.
   // The backend runs yt-dlp in a background thread and updates the model
@@ -100,7 +124,7 @@ export default function VideoCard({
     }
   }
 
-  // ── Existing actions ───────────────────────────────────────────────────────
+  // ── Theater actions ────────────────────────────────────────────────────────
 
   const handleDelete = async () => {
     setDeleting(true)
@@ -134,26 +158,109 @@ export default function VideoCard({
     const value = titleDraft.trim()
     setEditingTitle(false)
     if (!value || value === item.title) return
-    onEditTitle(item.id, value)
+    onEditItem(item.id, { title: value })
+  }
+
+  // ── Card quick-edit actions ────────────────────────────────────────────────
+
+  const openCardEdit = (e) => {
+    e.stopPropagation()
+    setCardTitleDraft(item.title)
+    setCardUrlDraft(item.youtube_url)
+    setCardUrlError(null)
+    setCardEditing(true)
+  }
+
+  const handleCardSave = () => {
+    const title = cardTitleDraft.trim()
+    const url = cardUrlDraft.trim()
+    if (!title) return
+    if (url !== item.youtube_url && !YOUTUBE_URL_RE.test(url)) {
+      setCardUrlError(t('video.invalidUrl'))
+      return
+    }
+    setCardUrlError(null)
+    setCardEditing(false)
+    const fields = {}
+    if (title !== item.title) fields.title = title
+    if (url !== item.youtube_url) fields.youtube_url = url
+    if (Object.keys(fields).length > 0) onEditItem(item.id, fields)
+  }
+
+  const handleCardDelete = async () => {
+    setCardDeleting(true)
+    try {
+      await onDelete(item.id)
+    } finally {
+      setCardDeleting(false)
+      setCardConfirmDelete(false)
+    }
   }
 
   return (
     <>
-      {/* ── Card (thumbnail + offline badge) ── */}
+      {/* ── Card (thumbnail + offline badge + hover actions) ── */}
       <div
         className={`video-card ${isCompleted ? 'video-card--done' : ''} ${isDragOver ? 'video-card--drag-over' : ''}`}
         draggable={draggable}
-        onClick={() => { if (justDragged.current) return; setTheater(true) }}
+        onClick={() => {
+          if (justDragged.current || cardEditing || cardConfirmDelete) return
+          setTheater(true)
+        }}
         onDragStart={() => { justDragged.current = false; onDragStart?.() }}
         onDragEnd={() => { justDragged.current = true; setTimeout(() => { justDragged.current = false }, 100) }}
         onDragOver={(e) => { e.preventDefault(); onDragOver?.() }}
         onDrop={(e) => { e.preventDefault(); onDrop?.() }}
         title={draggable ? t('video.dragToReorder') : t('video.openTheater')}
       >
+        {/* Card-level edit / delete-confirm overlay */}
+        {(cardEditing || cardConfirmDelete) && (
+          <div className="card-overlay" onClick={(e) => e.stopPropagation()}>
+            {cardEditing ? (
+              <form
+                className="card-edit-form"
+                onSubmit={(e) => { e.preventDefault(); handleCardSave() }}
+              >
+                <input
+                  className="card-edit-input"
+                  value={cardTitleDraft}
+                  onChange={(e) => setCardTitleDraft(e.target.value)}
+                  placeholder={t('video.clickToEditTitle')}
+                  autoFocus
+                />
+                <input
+                  className="card-edit-input"
+                  value={cardUrlDraft}
+                  onChange={(e) => { setCardUrlDraft(e.target.value); setCardUrlError(null) }}
+                  placeholder="YouTube URL"
+                />
+                {cardUrlError && <span className="card-edit-error">{cardUrlError}</span>}
+                <div className="card-edit-actions">
+                  <button type="submit" className="btn-primary-sm">{t('common.save')}</button>
+                  <button type="button" className="btn-ghost-sm" onClick={() => setCardEditing(false)}>
+                    {t('common.cancel')}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="card-confirm">
+                <p>{t('video.removeVideo')}</p>
+                <div className="card-confirm-actions">
+                  <button className="btn-danger-sm" onClick={handleCardDelete} disabled={cardDeleting}>
+                    {cardDeleting ? '…' : t('video.yesDelete')}
+                  </button>
+                  <button className="btn-ghost-sm" onClick={() => setCardConfirmDelete(false)}>
+                    {t('common.cancel')}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="video-card__thumb">
           <img src={item.thumbnail_url} alt={item.title} />
           <div className="play-overlay">▶</div>
-          {/* Badge visible on the card so the user knows which videos are cached */}
           {hasLocalFile && (
             <span className="offline-badge" title={t('video.offlineAvailable')}>{t('video.offlineBadge')}</span>
           )}
@@ -162,6 +269,20 @@ export default function VideoCard({
           <p className="video-card__pos">#{item.position + 1}</p>
           <h3 className="video-card__title">{item.title}</h3>
           {isCompleted && <span className="card-done-badge">{t('video.doneBadge')}</span>}
+          {!readOnly && (
+            <div className="card-actions">
+              <button
+                className="card-action-btn"
+                onClick={openCardEdit}
+                title={t('video.editVideo')}
+              >✎</button>
+              <button
+                className="card-action-btn card-action-btn--danger"
+                onClick={(e) => { e.stopPropagation(); setCardConfirmDelete(true) }}
+                title={t('common.delete')}
+              >✕</button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -175,12 +296,6 @@ export default function VideoCard({
             <button className="theater-close" onClick={() => setTheater(false)}>✕</button>
 
             <div className="theater-player">
-              {/*
-                If a local file exists, stream it from Django instead of
-                embedding YouTube. Works completely offline and supports
-                seeking via the HTTP Range requests handled by VideoServeView.
-                Falls back to the YouTube embed when no local file is present.
-              */}
               {hasLocalFile && videoToken ? (
                 <video
                   controls

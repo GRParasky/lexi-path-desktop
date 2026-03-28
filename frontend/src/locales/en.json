@@ -2,6 +2,7 @@
   "common": {
     "cancel": "Cancel",
     "delete": "Delete",
+    "save": "Save",
     "loading": "Loading…",
     "clone": "Clone",
     "cloning": "Cloning…",
@@ -97,7 +98,9 @@
     "markComplete": "Mark complete",
     "removeVideo": "Remove this video?",
     "yesDelete": "Yes, delete",
-    "watchOnYouTube": "Watch on YouTube"
+    "watchOnYouTube": "Watch on YouTube",
+    "editVideo": "Edit title / URL",
+    "invalidUrl": "Not a valid YouTube URL"
   },
   "progress": {
     "complete": "{{percentage}}% complete"

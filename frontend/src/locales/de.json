@@ -2,6 +2,7 @@
   "common": {
     "cancel": "Abbrechen",
     "delete": "Löschen",
+    "save": "Speichern",
     "loading": "Laden…",
     "clone": "Klonen",
     "cloning": "Wird geklont…",
@@ -97,7 +98,9 @@
     "markComplete": "Als abgeschlossen markieren",
     "removeVideo": "Dieses Video entfernen?",
     "yesDelete": "Ja, löschen",
-    "watchOnYouTube": "Auf YouTube ansehen"
+    "watchOnYouTube": "Auf YouTube ansehen",
+    "editVideo": "Titel / URL bearbeiten",
+    "invalidUrl": "Keine gültige YouTube-URL"
   },
   "progress": {
     "complete": "{{percentage}}% abgeschlossen"
