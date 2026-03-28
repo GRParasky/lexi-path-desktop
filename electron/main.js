@@ -1,6 +1,7 @@
 'use strict'
 
-const { app, BrowserWindow, shell } = require('electron')
+const { app, BrowserWindow, shell, dialog } = require('electron')
+const { autoUpdater } = require('electron-updater')
 const path = require('path')
 const { spawn } = require('child_process')
 
@@ -95,6 +96,55 @@ function startBackend() {
 }
 
 /**
+ * Check for updates once the main window is open.
+ *
+ * Windows / Linux: auto-downloads in the background, prompts restart when ready.
+ * macOS: no auto-download (requires code signing); shows a dialog that opens
+ *        the GitHub Releases page in the system browser instead.
+ */
+function setupAutoUpdater() {
+  autoUpdater.autoDownload = false
+
+  autoUpdater.on('update-available', (info) => {
+    if (process.platform === 'darwin') {
+      dialog.showMessageBox(mainWindow, {
+        type: 'info',
+        title: 'Update available',
+        message: `LexiPath ${info.version} is available`,
+        detail: 'Download the new version from GitHub to get the latest improvements.',
+        buttons: ['Download', 'Later'],
+        defaultId: 0,
+      }).then(({ response }) => {
+        if (response === 0) {
+          shell.openExternal('https://github.com/GRParasky/lexi-path-desktop/releases/latest')
+        }
+      })
+    } else {
+      autoUpdater.downloadUpdate()
+    }
+  })
+
+  autoUpdater.on('update-downloaded', () => {
+    dialog.showMessageBox(mainWindow, {
+      type: 'info',
+      title: 'Update ready',
+      message: 'A new version has been downloaded.',
+      detail: 'Restart LexiPath to apply the update.',
+      buttons: ['Restart now', 'Later'],
+      defaultId: 0,
+    }).then(({ response }) => {
+      if (response === 0) autoUpdater.quitAndInstall()
+    })
+  })
+
+  autoUpdater.on('error', (err) => {
+    console.error('[updater]', err.message)
+  })
+
+  autoUpdater.checkForUpdates()
+}
+
+/**
  * Create (or recreate) the main BrowserWindow and load the given URL.
  */
 function createWindow(url) {
@@ -162,10 +212,10 @@ app.whenReady().then(async () => {
       // (We can't toggle frame after creation, so we destroy and recreate)
       mainWindow.close()
       createWindow(PROD_URL)
+      setupAutoUpdater()
     } catch (err) {
       console.error(err)
       // Show a basic error dialog and quit — better than hanging silently
-      const { dialog } = require('electron')
       dialog.showErrorBox(
         'LexiPath failed to start',
         `The backend could not be started.\n\n${err.message}`
