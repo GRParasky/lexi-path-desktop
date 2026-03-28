@@ -4,6 +4,23 @@ All notable changes to LexiPath Desktop are documented here.
 
 ---
 
+## [1.0.3] — 2026-03-28
+
+### Added
+- Full internationalisation (i18n) support — the app is now fully translated into 6 languages: English (default), Brazilian Portuguese, Spanish, German, Italian, and French
+- Language selector in the top-right corner of the dashboard — persists the chosen language across sessions via `localStorage`
+- ~96 user-facing strings translated across all pages and components: Dashboard, Path, Shared Path, Video Card, and Progress Bar
+
+### Technical notes
+- Library: `react-i18next` + `i18next`
+- Translation files live in `frontend/src/locales/{en,pt-BR,es,de,it,fr}.json`
+- Shared strings (cancel, delete, clone dialog) live under a `common` namespace to avoid duplication between components
+- Pluralization uses i18next `_one`/`_other` keys backed by `Intl.PluralRules` — each language gets correct pluralization automatically
+- The delete dialog description uses the `Trans` component to safely interpolate a `<strong>` tag around the path title without `dangerouslySetInnerHTML`
+- i18n initialises in `main.jsx` before any component renders, ensuring the first paint already uses the correct language
+
+---
+
 ## [1.0.2] — 2026-03-28
 
 ### Changed
