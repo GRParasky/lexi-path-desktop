@@ -5,9 +5,10 @@ Used by PyInstaller and Electron. Responsibilities:
   1. Locate (or create) the user data directory.
   2. Generate a persistent SECRET_KEY on first run and store it there.
   3. Set all required env vars before Django loads.
-  4. Run database migrations silently.
+  4. Run database migrations (skipped if nothing changed since last run).
   5. Start the Waitress WSGI server.
 """
+import hashlib
 import os
 import sys
 import secrets
@@ -46,6 +47,53 @@ def _set_static_root_for_bundle() -> None:
         os.environ['STATIC_ROOT_OVERRIDE'] = str(bundle_dir / 'staticfiles')
 
 
+def _compute_migration_hash() -> str:
+    """
+    Return a short hash of all migration filenames across every Django app.
+
+    Only filenames are hashed (not file contents) because the set of
+    migrations that exist is what determines whether 'migrate' needs to run.
+    Adding or removing a migration file changes the hash; editing a migration
+    that was already applied has no effect on the DB schema anyway.
+
+    Requires django.setup() to have been called first so that
+    apps.get_app_configs() is populated.
+    """
+    from django.apps import apps as django_apps
+
+    names = []
+    for app_config in django_apps.get_app_configs():
+        migrations_dir = Path(app_config.path) / 'migrations'
+        if migrations_dir.is_dir():
+            for f in sorted(migrations_dir.glob('[0-9]*.py')):
+                names.append(f'{app_config.label}/{f.name}')
+
+    return hashlib.sha256('\n'.join(names).encode()).hexdigest()[:16]
+
+
+def _migrations_changed(data_dir: Path) -> bool:
+    """
+    Return True when migrations need to run.
+
+    Conservative by design: any error (missing file, import failure, etc.)
+    causes this to return True so that 'migrate' always runs as a fallback.
+    """
+    hash_file = data_dir / '.migration_version'
+    try:
+        current = _compute_migration_hash()
+        return not hash_file.exists() or hash_file.read_text().strip() != current
+    except Exception:
+        return True
+
+
+def _save_migration_hash(data_dir: Path) -> None:
+    """Persist the current migration hash. Called only after a successful migrate."""
+    try:
+        (data_dir / '.migration_version').write_text(_compute_migration_hash())
+    except Exception:
+        pass  # Non-critical — worst case, migrate runs again next launch
+
+
 def main():
     data_dir = _get_data_dir()
 
@@ -60,9 +108,12 @@ def main():
     import django
     django.setup()
 
-    # Run any pending migrations silently on startup
+    # Run migrations only when the set of migration files has changed.
+    # On a typical launch (no app update) this saves 1-3 seconds.
     from django.core.management import call_command
-    call_command('migrate', verbosity=0)
+    if _migrations_changed(data_dir):
+        call_command('migrate', verbosity=0)
+        _save_migration_hash(data_dir)
 
     # Reset any items that were left in 'downloading' state from a previous session.
     # This can happen if the app was closed while a download was in progress.
