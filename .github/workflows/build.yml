@@ -98,3 +98,44 @@ jobs:
           VERSION=${GITHUB_REF_NAME#v}
           cd electron
           npx electron-builder --publish always --config.extraMetadata.version=$VERSION
+
+  # ---------------------------------------------------------------------------
+  # Finalize: runs after ALL three build jobs succeed.
+  # Sets a user-friendly release description and publishes the draft.
+  # ---------------------------------------------------------------------------
+  finalize:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish release with download instructions
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        shell: bash
+        run: |
+          VERSION=${GITHUB_REF_NAME#v}
+          cat > /tmp/release-notes.md << EOF
+          ## Download LexiPath ${VERSION}
+
+          | Platform | Download |
+          |----------|----------|
+          | 🪟 Windows | [LexiPath-Setup-${VERSION}.exe](https://github.com/GRParasky/lexi-path-desktop/releases/download/v${VERSION}/LexiPath-Setup-${VERSION}.exe) |
+          | 🍎 macOS (Apple Silicon) | [LexiPath-${VERSION}-arm64.dmg](https://github.com/GRParasky/lexi-path-desktop/releases/download/v${VERSION}/LexiPath-${VERSION}-arm64.dmg) |
+          | 🐧 Linux | [LexiPath-${VERSION}.AppImage](https://github.com/GRParasky/lexi-path-desktop/releases/download/v${VERSION}/LexiPath-${VERSION}.AppImage) |
+
+          ### Windows
+          Run \`LexiPath-Setup-${VERSION}.exe\` and follow the installer.
+
+          ### macOS
+          Open \`LexiPath-${VERSION}-arm64.dmg\`, drag LexiPath to Applications.
+
+          ### Linux
+          \`\`\`bash
+          chmod +x LexiPath-${VERSION}.AppImage
+          ./LexiPath-${VERSION}.AppImage
+          \`\`\`
+          EOF
+
+          gh release edit "v${VERSION}" \
+            --repo GRParasky/lexi-path-desktop \
+            --draft=false \
+            --notes-file /tmp/release-notes.md

@@ -8,25 +8,25 @@ Built with Electron + Django + React. Stores all data locally on your machine.
 
 ## Download
 
-> Installers are published on the [Releases](../../releases) page.
+Go to the **[latest release](https://github.com/GRParasky/lexi-path-desktop/releases/latest)** and download the file for your platform:
 
 | Platform | File |
 |----------|------|
-| Windows  | `LexiPath-x.x.x-windows.exe` |
-| macOS    | `LexiPath-x.x.x-mac.dmg` |
-| Linux    | `LexiPath-x.x.x-linux.AppImage` |
-
-### Linux (AppImage)
-```bash
-chmod +x LexiPath-*.AppImage
-./LexiPath-*.AppImage
-```
+| 🪟 Windows | `LexiPath-Setup-x.x.x.exe` |
+| 🍎 macOS (Apple Silicon) | `LexiPath-x.x.x-arm64.dmg` |
+| 🐧 Linux | `LexiPath-x.x.x.AppImage` |
 
 ### Windows
-Run the `.exe` installer. Choose your install directory and click Install.
+Run `LexiPath-Setup-x.x.x.exe` and follow the installer.
 
 ### macOS
-Open the `.dmg`, drag LexiPath to Applications.
+Open `LexiPath-x.x.x-arm64.dmg`, drag LexiPath to Applications.
+
+### Linux
+```bash
+chmod +x LexiPath-x.x.x.AppImage
+./LexiPath-x.x.x.AppImage
+```
 
 ---
 
