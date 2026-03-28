@@ -17,14 +17,26 @@ client.interceptors.request.use((config) => {
   return config
 })
 
-// Response interceptor: if any request gets a 401, clear stored tokens.
-// This handles expired tokens cleanly without crashing.
+// Response interceptor: on 401, re-authenticate via auto-login and retry.
+// Desktop app has no password, so auto-login is always safe to call.
+// _retry flag prevents infinite loops if auto-login itself returns 401.
 client.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('access')
-      localStorage.removeItem('refresh')
+  async (error) => {
+    const originalRequest = error.config
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true
+      try {
+        // Use bare axios (not client) to avoid triggering this interceptor again
+        const { data } = await axios.get('/api/auth/auto-login/')
+        localStorage.setItem('access', data.access)
+        localStorage.setItem('refresh', data.refresh)
+        originalRequest.headers.Authorization = `Bearer ${data.access}`
+        return client(originalRequest)
+      } catch {
+        localStorage.removeItem('access')
+        localStorage.removeItem('refresh')
+      }
     }
     return Promise.reject(error)
   }
