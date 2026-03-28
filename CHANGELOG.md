@@ -4,6 +4,27 @@ All notable changes to LexiPath Desktop are documented here.
 
 ---
 
+## [1.0.6] — 2026-03-28
+
+### Added
+- **Hover actions on video cards** — hovering a card now reveals two icon buttons: ✎ (edit) and ✕ (delete). Both are hidden by default and fade in on hover so the card layout is not cluttered during normal browsing.
+- **Quick edit form on card** — clicking ✎ opens an inline overlay directly on the card with pre-filled title and YouTube URL inputs. Escape cancels, Enter or the Save button commits. No need to open the theater modal to fix a typo or wrong URL.
+- **Edit video URL** — the URL field in the quick edit form is now fully editable. Changing it re-derives the video ID, thumbnail, and resets the offline download state on the backend (the previous file is orphaned on disk but no longer referenced). A client-side regex validates the URL before the request is sent.
+- **Delete confirm on hover** — clicking ✕ shows the same "Remove this video? / Yes, delete / Cancel" confirmation as inside the theater modal, directly on the card.
+- **YouTube embed replaced with thumbnail + external link** — the YouTube iframe player is removed from the theater modal. Some videos block embedding (Error 153) and the failure is invisible cross-origin. Instead, the theater now shows the video thumbnail with a red "Watch on YouTube" button that opens the video in the system browser via Electron's `shell.openExternal`.
+
+### Fixed
+- Changing a video's YouTube URL now correctly updates the thumbnail shown on the card (previously only the title could be changed and the thumbnail stayed stale).
+
+### Technical notes
+- `LearningPathItemSerializer.update()` re-extracts `video_id`, `thumbnail_url`, and resets `download_status`/`local_file_path` whenever `youtube_url` changes; `create()` was already doing this, now `update()` is consistent
+- `handleEditTitle` in `PathPage` replaced with `handleEditItem(id, fields)` — always syncs from the API response so backend-derived fields (`video_id`, `thumbnail_url`) land in React state correctly
+- Card `onClick` is guarded against opening the theater while the edit form or delete confirm overlay is active
+- `common.save`, `video.editVideo`, `video.invalidUrl` added to all 6 locales (EN, PT-BR, ES, DE, IT, FR)
+- `.video-card` has `position: relative` so the absolute overlay is clipped by the card's border-radius
+
+---
+
 ## [1.0.5] — 2026-03-28
 
 ### Performance
