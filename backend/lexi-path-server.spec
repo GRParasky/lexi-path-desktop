@@ -9,7 +9,15 @@
 # this spec file — i.e. backend/. All relative paths below are relative to it.
 
 import os
+import sys
 from PyInstaller.utils.hooks import collect_data_files, collect_submodules
+
+# UPX compresses individual binaries inside the bundle.
+# Enabled on Linux only:
+#   - macOS arm64: UPX corrupts binaries on Apple Silicon (binary format incompatibility)
+#   - Windows: UPX-compressed executables trigger Windows Defender false positives
+#   - Linux: safe and effective
+_use_upx = sys.platform == 'linux'
 
 # ---------------------------------------------------------------------------
 # Data files
@@ -134,9 +142,17 @@ a = Analysis(
     runtime_hooks=[],
 
     # Safe exclusions — reduces bundle size without breaking anything.
-    # tkinter: GUI toolkit, not used anywhere in this stack.
-    # unittest / test: test infrastructure, not needed at runtime.
-    excludes=['tkinter', '_tkinter'],
+    # tkinter/_tkinter : GUI toolkit — not used anywhere in this stack.
+    # Unused network protocols: ftplib, imaplib, poplib, telnetlib, xmlrpc.
+    # Development/debugging tools: pdb, lib2to3, doctest.
+    # NOTE: unittest must NOT be excluded — rest_framework_simplejwt imports
+    # django.test at startup which chains into unittest. Removing it causes
+    # ModuleNotFoundError at launch inside the frozen binary.
+    excludes=[
+        'tkinter', '_tkinter',
+        'ftplib', 'imaplib', 'poplib', 'telnetlib', 'xmlrpc',
+        'pdb', 'lib2to3', 'doctest',
+    ],
 
     noarchive=False,
 )
@@ -152,7 +168,7 @@ exe = EXE(
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
-    upx=True,    # compress with UPX if available — see post-v0.0 TODO
+    upx=_use_upx,
     # console=True is REQUIRED: Electron's main.js reads stdout to detect
     # when Django is ready. A windowed binary would suppress all stdout output.
     console=True,
@@ -178,7 +194,7 @@ coll = COLLECT(
     a.zipfiles,
     a.datas,
     strip=False,
-    upx=True,
+    upx=_use_upx,
     upx_exclude=[],
     name='lexi-path-server',
 )

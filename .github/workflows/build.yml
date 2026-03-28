@@ -65,6 +65,10 @@ jobs:
       # -------------------------------------------------------------------------
       # Step 4 — PyInstaller
       # -------------------------------------------------------------------------
+      - name: Install UPX (Linux only)
+        if: runner.os == 'Linux'
+        run: sudo apt-get install -y upx-ucl
+
       - name: Bundle Python backend (PyInstaller)
         env:
           SECRET_KEY: build-placeholder

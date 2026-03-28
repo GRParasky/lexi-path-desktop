@@ -17,6 +17,7 @@
   "build": {
     "appId": "com.lexipath.desktop",
     "productName": "LexiPath",
+    "compression": "maximum",
 
     "publish": {
       "provider": "github",
