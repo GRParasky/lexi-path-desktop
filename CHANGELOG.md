@@ -4,6 +4,13 @@ All notable changes to LexiPath Desktop are documented here.
 
 ---
 
+## [1.0.5] — 2026-03-28
+
+### Performance
+- Startup time reduced by 1–3 seconds on every launch after the first. `run_server.py` now hashes all migration filenames across every Django app and skips `migrate` entirely when nothing has changed since the last run. The hash is stored in `.migration_version` in the user data directory and updated only after a successful migrate, so a failed or interrupted migrate always retries on the next launch.
+
+---
+
 ## [1.0.4] — 2026-03-28
 
 ### Fixed
