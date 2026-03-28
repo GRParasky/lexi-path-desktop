@@ -96,7 +96,8 @@
     "retry": "Erneut versuchen",
     "markComplete": "Als abgeschlossen markieren",
     "removeVideo": "Dieses Video entfernen?",
-    "yesDelete": "Ja, löschen"
+    "yesDelete": "Ja, löschen",
+    "watchOnYouTube": "Auf YouTube ansehen"
   },
   "progress": {
     "complete": "{{percentage}}% abgeschlossen"

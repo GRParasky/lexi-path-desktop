@@ -96,7 +96,8 @@
     "retry": "Reintentar",
     "markComplete": "Marcar como completado",
     "removeVideo": "¿Eliminar este video?",
-    "yesDelete": "Sí, eliminar"
+    "yesDelete": "Sí, eliminar",
+    "watchOnYouTube": "Ver en YouTube"
   },
   "progress": {
     "complete": "{{percentage}}% completado"

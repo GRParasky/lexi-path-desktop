@@ -96,7 +96,8 @@
     "retry": "Retry",
     "markComplete": "Mark complete",
     "removeVideo": "Remove this video?",
-    "yesDelete": "Yes, delete"
+    "yesDelete": "Yes, delete",
+    "watchOnYouTube": "Watch on YouTube"
   },
   "progress": {
     "complete": "{{percentage}}% complete"

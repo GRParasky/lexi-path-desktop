@@ -188,12 +188,27 @@ export default function VideoCard({
                   src={`/api/videos/serve/${item.id}/?token=${videoToken}`}
                 />
               ) : (
-                <iframe
-                  src={`https://www.youtube.com/embed/${item.video_id}?autoplay=1`}
-                  allow="autoplay; encrypted-media"
-                  allowFullScreen
-                  title={item.title}
-                />
+                // Video not downloaded yet. Embedding YouTube via iframe is
+                // unreliable in Electron — some videos have embedding disabled
+                // (Error 153) and we can't detect this cross-origin. Instead,
+                // show the thumbnail and open the video in the system browser.
+                // setWindowOpenHandler in main.js intercepts window.open() and
+                // routes it through shell.openExternal automatically.
+                <div className="theater-yt-fallback">
+                  <img
+                    src={`https://i.ytimg.com/vi/${item.video_id}/hqdefault.jpg`}
+                    alt={item.title}
+                    className="theater-yt-fallback__thumb"
+                  />
+                  <a
+                    href={`https://www.youtube.com/watch?v=${item.video_id}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="theater-yt-fallback__btn"
+                  >
+                    ▶ {t('watchOnYouTube')}
+                  </a>
+                </div>
               )}
             </div>
 
