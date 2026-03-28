@@ -4,6 +4,38 @@ All notable changes to LexiPath Desktop are documented here.
 
 ---
 
+## [1.0.2] — 2026-03-28
+
+### Changed
+- `yt-dlp` bumped from `2025.3.31` to `2026.3.17` — YouTube regularly changes its format; older versions break silently
+
+### Performance
+- `electron/package.json`: `"compression": "maximum"` — electron-builder now uses LZMA/xz maximum compression on all targets, reducing installer size
+- `backend/lexi-path-server.spec`: added safe stdlib excludes (`ftplib`, `imaplib`, `poplib`, `telnetlib`, `xmlrpc`, `pdb`, `lib2to3`, `doctest`) — unused modules removed from the PyInstaller bundle
+- UPX compression enabled on Linux builds only — UPX corrupts macOS arm64 binaries and triggers Windows Defender false positives on Windows; Linux is unaffected by either issue
+
+---
+
+## [1.0.1] — 2026-03-27
+
+### Fixed
+- Videos left in `downloading` state when the app was closed mid-download would stay stuck forever on next launch. On startup, `run_server.py` now resets all `downloading` items to `error` after migrations run — the Retry button in the UI handles re-downloading from scratch
+
+### Added
+- GitHub Actions CI pipeline (`.github/workflows/build.yml`) — triggers on version tag push (`v*`); builds on `windows-latest`, `macos-latest`, and `ubuntu-latest` in parallel; uploads installers to GitHub Releases automatically
+- `finalize` CI job runs after all three builds succeed — sets a user-friendly release description with a per-platform download table and publishes the draft automatically
+- `electron-updater` integration — on every launch the app silently checks GitHub Releases for a newer version
+  - Windows / Linux: downloads the update in the background and prompts the user to restart
+  - macOS: shows a dialog with a direct link to the GitHub Releases page (auto-install requires code signing, which is not yet set up)
+- `GH_TOKEN` fine-grained secret (Contents: Read/Write on this repo) used by CI to publish releases — no broader repository access required
+
+### Technical notes
+- `SECRET_KEY` env var must be set for both the `collectstatic` and `PyInstaller` steps in CI — PyInstaller's Django hook runs `django.setup()` during analysis, which reads `settings.py` and triggers `python-decouple` to look for the key
+- Version is passed to electron-builder via `--config.extraMetadata.version=${GITHUB_REF_NAME#v}` — the git tag is the single source of truth; `package.json` version never needs to be bumped manually
+- `fail-fast: false` on the build matrix — all three OS jobs complete even if one fails
+
+---
+
 ## [1.0.0] — 2026-03-27
 
 First release of the desktop app. Forked from the LexiPath web version and adapted to run entirely locally — no server, no account, no internet required after install.
