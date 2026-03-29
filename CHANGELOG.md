@@ -4,6 +4,78 @@ All notable changes to LexiPath Desktop are documented here.
 
 ---
 
+## [1.1.0] — 2026-03-29
+
+### Added
+
+#### In-app video streaming
+- **Non-downloaded videos now stream directly inside the app** — opening theater mode on a video that hasn't been downloaded no longer shows a static fallback immediately. The player attempts to stream the video in-app first via a yt-dlp proxy; the "Download & Watch" / "Watch on YouTube" options only appear if streaming genuinely fails.
+- **DASH video streaming via ffmpeg** — YouTube increasingly serves videos as separate video-only and audio-only DASH streams rather than a single combined file. When a video has no combined format, the backend now invokes ffmpeg to merge the two streams on-the-fly and pipe a fragmented MP4 directly to the browser's `<video>` element. Videos that previously hard-failed now play in-app without downloading. Note: because the output is a live pipe, seeking (scrubbing the progress bar) is not supported for this mode — the video plays from start to end.
+- **"Connecting to video…" loading state** — instead of a blank black rectangle while yt-dlp extracts the stream URL (which can take several seconds), the player now shows a spinner with a localized "Connecting to video…" label.
+
+#### Download failure reasons
+- **Specific error messages when a download fails** — instead of a generic "Download failed" message, the user now sees a short explanation of why the download could not complete. Reasons covered: bot detection by YouTube, age-restricted content, geo-blocked content, YouTube Premium required, channel members-only content, unavailable or private video, no downloadable format found, and unknown errors.
+- Added `download_error` field to the `LearningPathItem` model (migration `0003`) and exposed it through the serializer and download status API.
+- Error reasons persist across app restarts and are cleared automatically on a successful download, on retry, on video removal, or when the video URL is changed.
+
+#### Bot detection bypass
+- **Automatic browser cookie retry for yt-dlp** — when YouTube's bot detection blocks a download or stream extraction ("Sign in to confirm you're not a bot"), yt-dlp now automatically retries the request using cookies from each installed browser in sequence: Firefox, Brave, Chrome, Chromium, Edge, Opera, Vivaldi, Safari. The first browser whose cookies satisfy YouTube is used; if none work, the operation fails with a clear `bot_detection` error.
+
+#### Native local video protocol (`lexipath://`)
+- **Downloaded videos served natively by Electron** — local video files are now served via a custom `lexipath://` URL scheme registered in Electron's main process using `protocol.handle()`. The browser-level `<video>` element fetches the file directly through Node.js (`net.fetch` + `pathToFileURL`), completely bypassing the Python backend for local playback. This eliminates the memory spike that previously caused backend crashes when seeking, and gives the native seeking performance of a local file.
+
+### Fixed
+
+- **Backend crash when seeking a downloaded video** — the previous `VideoServeView` implementation called `f.read(length)` to satisfy range requests, loading the entire requested range (potentially hundreds of MB) into RAM at once. Replaced with `StreamingHttpResponse` and a `_stream_range()` generator that yields 512 KB chunks, making memory usage constant regardless of file size or seek position.
+- **Wrong error message for channel members-only videos** — videos restricted to channel members ("Join this channel to get access to members-only content") were incorrectly reported as "This video requires YouTube Premium." Fixed by separating the `members_only` reason code from `premium_required` in `_parse_yt_dlp_error()`, matched by the substrings `'member'` or `'join this channel'` in the exception text.
+- **Format detection always failing for DASH-only videos** — when yt-dlp is called without an explicit `format` selector and `download=False`, it populates the `formats[]` list with metadata but leaves each entry's `url` field empty. The previous implementation scanned this list for combined A/V formats and found none (all `url` fields were `None`), incorrectly treating every video as DASH-only. Fixed by using an explicit format selector (`22/18/best[acodec!=none][vcodec!=none]`) which forces yt-dlp to resolve the actual CDN URL for the selected format.
+- **`UnboundLocalError` in bot detection retry loop** — Python's `except Exception as e` clause automatically deletes the variable `e` at the end of the block. A subsequent reference to it after the block raised `UnboundLocalError: cannot access local variable 'first_exc' before assignment`. Fixed by assigning `last_exc = None` before the try block and updating it inside the except clause.
+- **Delete confirmation buttons misaligned on card hover** — after clicking the trash icon on a card, the "Yes, delete" and "Cancel" buttons were right-aligned (`justify-content: flex-end`) while the "Remove this video?" label above them was centered. The two buttons together appeared off-balance. Fixed by splitting `.card-edit-actions` and `.card-confirm-actions` into separate CSS rules and applying `justify-content: center` to the confirm actions.
+
+### Technical notes
+
+**Backend (`backend/apps/paths/views.py`)**
+- Added `_parse_yt_dlp_error(exc)` — maps yt-dlp exception messages to one of 8 short reason codes: `bot_detection`, `age_restricted`, `geo_blocked`, `premium_required`, `members_only`, `unavailable`, `format_unavailable`, `unknown`
+- Added `_is_bot_error(exc)` — detects retryable bot/cookie errors by checking for `'sign in'`, `'bot'`, `'cookie'`, `'could not find'`, `'failed to load'` in the exception message
+- Added `_yt_extract_info(url, opts)` — wraps yt-dlp's `extract_info` with automatic browser cookie retry on bot detection
+- Added `_ffmpeg_merge_response(ffmpeg_info)` — spawns `ffmpeg` with separate DASH video/audio CDN URLs and returns a `StreamingHttpResponse` piping the merged fragmented MP4 (`frag_keyframe+empty_moov`)
+- `VideoOnlineStreamView` now uses a two-step extraction: Step 1 tries `22/18/best[acodec!=none][vcodec!=none]` (fast, no ffmpeg); Step 2, if Step 1 raises "Requested format is not available", extracts DASH streams and pipes through ffmpeg
+- Three cache keys per video: `yt_online_url:{id}` (combined URL, 30 min), `yt_online_ffmpeg:{id}` (DASH CDN URLs, 10 min), `yt_online_dash_only:{id}` (no-ffmpeg fallback, 5 min)
+- `VideoTokenView` returns `{"token": "…", "local_path": "/abs/path/or/null"}` — `local_path` is used by the frontend to construct the `lexipath://` URL without an extra API call
+- `VideoServeView` range handler replaced with `_stream_range()` generator (512 KB chunks via `StreamingHttpResponse`)
+- `_download_video_task` stores `_parse_yt_dlp_error(exc)` in `download_error` on failure; clears it on success
+- `VideoDownloadView.post()` clears `download_error` on retry start; `VideoDownloadView.get()` returns `download_error` in the status payload; `VideoDownloadView.delete()` clears `download_error`
+
+**Backend (`backend/apps/paths/models.py`)**
+- `LearningPathItem.download_error` — new `CharField(max_length=30, blank=True)` storing the last failure reason code
+
+**Backend (`backend/apps/paths/serializers.py`)**
+- `download_error` added to `fields` and `read_only_fields`; cleared in `update()` when `youtube_url` changes
+
+**Frontend (`frontend/src/components/VideoCard.jsx`)**
+- Token is now fetched whenever theater opens, regardless of download status — previously only fetched when `hasLocalFile`, which prevented online streaming from being authenticated
+- New states: `onlineStreamFailed`, `onlineStreamLoading`, `localPath`, `useNativeProtocol`, `videoError`, `tokenError`, `downloadError`
+- Downloaded videos use `lexipath://video?path=…` as the `<video>` src; falls back to Django proxy if the native protocol is unavailable (browser dev mode)
+- Non-downloaded videos: shows `<video src="/api/videos/online-stream/{id}/?token=…">` with `onLoadStart`/`onCanPlay`/`onError` handlers; on `onError` the player transitions to the "Download & Watch" / "Watch on YouTube" fallback UI
+- `downloadError` state initialized from `item.download_error`, updated by the polling loop, cleared on retry and remove; displayed as a small reason line below the "Download failed" badge
+
+**Electron (`electron/main.js`)**
+- `protocol.registerSchemesAsPrivileged` registers `lexipath://` as secure, streaming, CORS-enabled before `app.whenReady()`
+- `protocol.handle('lexipath', …)` inside `whenReady` serves local files via `net.fetch(pathToFileURL(filePath))`, forwarding the browser's Range headers for native seeking
+
+**Frontend (`frontend/src/index.css`)**
+- `.offline-error-reason` — small muted label rendered below "Download failed" to show the reason code
+- `.theater-loading` — converted to `flex-direction: column` with a `.theater-loading__label` child for the "Connecting…" text
+- `.card-confirm-actions` — split from `.card-edit-actions`, now uses `justify-content: center`
+- `.theater-not-downloaded` and all child classes for the fallback player UI
+
+**Locales (all 6: `en`, `pt-BR`, `es`, `de`, `it`, `fr`)**
+- `video.error.{reason}` object — 8 keys: `bot_detection`, `age_restricted`, `geo_blocked`, `premium_required`, `members_only`, `unavailable`, `format_unavailable`, `unknown`
+- `video.connecting` — "Connecting to video…" label shown during stream loading
+- `video.dashOnlyMessage`, `video.downloadToWatch`, `video.localFileError`, `video.watchOnYouTube`
+
+---
+
 ## [1.0.8] — 2026-03-29
 
 ### Fixed
