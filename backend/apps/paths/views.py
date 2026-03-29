@@ -268,7 +268,12 @@ def _download_video_task(item_id: int, youtube_url: str, video_id: str) -> None:
             local_file_path=str(final_path),
             download_status=LearningPathItem.DOWNLOAD_DONE,
         )
-    except Exception:
+    except Exception as exc:
+        import logging, traceback
+        logging.getLogger(__name__).error(
+            'Download failed for item %s (%s): %s\n%s',
+            item_id, youtube_url, exc, traceback.format_exc()
+        )
         LearningPathItem.objects.filter(pk=item_id).update(
             download_status=LearningPathItem.DOWNLOAD_ERROR,
         )
@@ -426,39 +431,80 @@ class VideoOnlineStreamView(APIView):
         stream_info = cache.get(url_cache_key)
         if not stream_info:
             try:
+                import logging
+                logger = logging.getLogger(__name__)
+
                 ydl_opts = {
-                    # 'best' selects the single best combined A/V format (~360–480p).
-                    # This avoids needing ffmpeg to merge separate DASH streams and
-                    # always returns a direct HTTPS URL we can proxy.
-                    'format': 'best',
+                    # Explicitly request a single combined A/V format.
+                    # Recent yt-dlp changed 'best' to prefer merged DASH streams
+                    # (bestvideo*+bestaudio), which have no single 'url' key when
+                    # extract_info(download=False) is used — only 'requested_formats'.
+                    # This selector picks the best format that has BOTH audio and
+                    # video in a single file (typically ~360–480p for YouTube).
+                    'format': 'best[acodec!=none][vcodec!=none]/best[acodec!=none]',
                     'quiet': True,
                     'no_warnings': True,
                 }
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                     info = ydl.extract_info(item.youtube_url, download=False)
-                stream_url = info.get('url')
-                if not stream_url:
-                    return Response(
-                        {'detail': 'Could not extract stream URL.'},
-                        status=status.HTTP_502_BAD_GATEWAY,
-                    )
-                ext = info.get('ext', 'mp4')
+
                 mime_map = {
                     'mp4': 'video/mp4',
                     'webm': 'video/webm',
                     'm4v': 'video/mp4',
                     'mov': 'video/quicktime',
                 }
+                ext = info.get('ext', 'mp4')
+                http_headers = info.get('http_headers', {})
+
+                # Primary: top-level url (single combined format)
+                stream_url = info.get('url')
+
+                # Fallback A: 'best' still selected a merged format
+                # (requested_formats = [video_fmt, audio_fmt]) — pick first with URL
+                if not stream_url and 'requested_formats' in info:
+                    for fmt in info['requested_formats']:
+                        if fmt.get('url'):
+                            stream_url = fmt['url']
+                            ext = fmt.get('ext', ext)
+                            http_headers = fmt.get('http_headers', http_headers)
+                            break
+
+                # Fallback B: scan formats list for any combined A/V entry
+                if not stream_url:
+                    for fmt in reversed(info.get('formats', [])):
+                        if (fmt.get('url')
+                                and fmt.get('acodec', 'none') != 'none'
+                                and fmt.get('vcodec', 'none') != 'none'):
+                            stream_url = fmt['url']
+                            ext = fmt.get('ext', ext)
+                            http_headers = fmt.get('http_headers', http_headers)
+                            break
+
+                if not stream_url:
+                    logger.error(
+                        'VideoOnlineStreamView: no usable URL in yt-dlp info for item %s. '
+                        'Keys present: %s', item_id, list(info.keys())
+                    )
+                    return Response(
+                        {'detail': 'Could not extract stream URL: no URL in yt-dlp response.'},
+                        status=status.HTTP_502_BAD_GATEWAY,
+                    )
+
                 stream_info = {
                     'url': stream_url,
                     'content_type': mime_map.get(ext, 'video/webm'),
-                    # yt-dlp provides the headers required to access the CDN URL
-                    'headers': dict(info.get('http_headers', {})),
+                    'headers': dict(http_headers),
                 }
                 cache.set(url_cache_key, stream_info, timeout=1800)
-            except Exception:
+            except Exception as exc:
+                import logging, traceback
+                logging.getLogger(__name__).error(
+                    'VideoOnlineStreamView: yt-dlp extraction failed for item %s: %s\n%s',
+                    item_id, exc, traceback.format_exc()
+                )
                 return Response(
-                    {'detail': 'Could not extract stream URL.'},
+                    {'detail': f'Stream extraction failed: {exc}'},
                     status=status.HTTP_502_BAD_GATEWAY,
                 )
 
