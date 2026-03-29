@@ -7,32 +7,28 @@ All notable changes to LexiPath Desktop are documented here.
 ## [1.0.8] — 2026-03-29
 
 ### Fixed
-- **Online video streaming and downloads working again** — both the in-app video player and the offline download feature were failing with a silent error. Root cause: recent yt-dlp changed the meaning of `format='best'` to prefer merged DASH streams (`bestvideo*+bestaudio`). When yt-dlp is called with `download=False` (streaming), merged formats have no single direct URL in the response — triggering a 502. Fixed by using an explicit format selector that requires a single combined A/V file.
+- **Playlist URLs now play and download correctly** — when a video URL contains `&list=PLAYLIST_ID`, yt-dlp was processing the entire playlist instead of the individual video, returning a playlist dict instead of a single video URL. Fixed by adding `noplaylist: True` to all yt-dlp calls.
+- **yt-dlp format selector corrected** — recent yt-dlp changed `format='best'` to prefer merged DASH streams (`bestvideo*+bestaudio`). When called with `download=False`, merged formats have no single direct URL, triggering a 502. Fixed by using `best[acodec!=none][vcodec!=none]/best[acodec!=none]` to explicitly require a single combined A/V stream.
 
 ### Technical notes
-- Format selector changed from `'best'` to `'best[acodec!=none][vcodec!=none]/best[acodec!=none]'` in `VideoOnlineStreamView` — filters to formats where both audio and video codecs are present in a single file (typically ~360–480p for YouTube)
-- Added three-level URL extraction fallback: (1) `info['url']` (single format), (2) `info['requested_formats'][0]['url']` (merged fallback), (3) scan `info['formats']` for any combined A/V entry
-- 502 response body now includes the actual yt-dlp exception message — visible in browser dev tools Network tab for future diagnosis
-- `_download_video_task` also gets proper exception logging with full traceback via Django's logger
+- `noplaylist: True` added to both `VideoOnlineStreamView` and `_download_video_task`
+- Format selector in `VideoOnlineStreamView` changed to `best[acodec!=none][vcodec!=none]/best[acodec!=none]`
+- Three-level URL extraction fallback: `info['url']` → `requested_formats[0]['url']` → scan `formats` list
+- Errors written to `{APP_DATA_DIR}/lexi-debug.log` via `_yt_logger()`
 
 ---
 
 ## [1.0.7] — 2026-03-28
 
 ### Fixed
-- **Videos now play inside the app again** — the "Watch on YouTube" workaround introduced in v1.0.6 is replaced with real in-app playback. Opening theater mode now streams the video directly inside LexiPath without any browser redirect.
-
-### How it works
-- A new backend endpoint (`GET /api/videos/online-stream/{item_id}/`) uses yt-dlp to extract the direct YouTube CDN URL (no file saved to disk) and proxies the video bytes through the local Django server. This completely sidesteps YouTube's iframe embedding restrictions (Error 153) because the browser is talking to `localhost`, not youtube.com.
-- Online streaming uses the `best` single-file format (~480p) — no ffmpeg required to merge separate audio/video tracks. Users who want higher quality can still download the video offline as before.
-- The extracted CDN URL is cached for 30 minutes — seeking works instantly without re-calling yt-dlp on every Range request.
-- If the backend is unreachable (e.g. yt-dlp fails), the theater falls back to the YouTube link as a last resort.
+- **Videos now play inside the app** — the "Watch on YouTube" workaround introduced in v1.0.6 is replaced with real in-app playback. Opening theater mode streams the video directly inside LexiPath without any browser redirect, bypassing YouTube's iframe embedding restrictions (Error 153) entirely.
 
 ### Technical notes
-- `VideoOnlineStreamView` in `backend/apps/paths/views.py` — auth mirrors `VideoServeView` (Bearer JWT or `?token=` query param); Range headers are forwarded so the `<video>` element can seek; expired CDN URLs clear the cache automatically so the next open re-extracts
-- `GET /api/videos/online-stream/{item_id}/` added to `backend/apps/paths/urls.py`
-- `LearningPathItemSerializer.update()` now deletes the `yt_online_url:{id}` cache entry when the YouTube URL is changed, ensuring the new video is streamed immediately
-- `VideoCard.jsx` token effect now runs on every theater open (not only for downloaded videos); theater player chooses `/videos/serve/` (local file) or `/videos/online-stream/` (online) based on `hasLocalFile`; loading spinner shown while the token request is in flight
+- New endpoint `GET /api/videos/online-stream/{item_id}/` uses yt-dlp to extract the direct YouTube CDN URL (no file saved to disk) and proxies the bytes through Django — no iframe, no embedding restrictions
+- CDN URL cached for 30 minutes; Range requests forwarded so the `<video>` element can seek
+- If streaming fails, the theater falls back to a "Watch on YouTube" link
+- `VideoCard.jsx` token effect now runs on every theater open; `<video>` chooses `/videos/serve/` (offline) or `/videos/online-stream/` (online) based on `hasLocalFile`; spinner shown while token is fetching
+- `LearningPathItemSerializer.update()` clears the cached stream URL when `youtube_url` changes
 
 ---
 
