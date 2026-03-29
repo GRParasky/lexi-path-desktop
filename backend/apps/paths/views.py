@@ -380,6 +380,124 @@ class VideoTokenView(APIView):
         return Response({'token': token})
 
 
+class VideoOnlineStreamView(APIView):
+    """
+    Stream a YouTube video in real-time without downloading it.
+
+    Uses yt-dlp to extract the direct CDN URL (format='best' → single combined
+    A/V stream, usually ~480p, no ffmpeg merge needed), then proxies the bytes
+    through Django.  The frontend uses a plain <video> element pointing at this
+    endpoint — no iframe, no embedding restrictions.
+
+    The extracted URL is cached for 30 min.  Range requests are forwarded so
+    the browser's media player can seek freely.
+    """
+    permission_classes = []
+
+    def get(self, request, item_id):
+        import urllib.request
+        import urllib.error
+        import yt_dlp
+        from django.http import StreamingHttpResponse
+
+        # --- Auth (mirrors VideoServeView: Bearer or ?token=) ---
+        token = request.query_params.get('token')
+        if token:
+            cached_id = cache.get(_token_key(token))
+            if cached_id != item_id:
+                return Response({'detail': 'Invalid or expired token.'}, status=status.HTTP_403_FORBIDDEN)
+            try:
+                item = LearningPathItem.objects.get(pk=item_id)
+            except LearningPathItem.DoesNotExist:
+                return Response({'detail': 'Item not found.'}, status=status.HTTP_404_NOT_FOUND)
+        else:
+            if not request.user or not request.user.is_authenticated:
+                return Response({'detail': 'Authentication required.'}, status=status.HTTP_401_UNAUTHORIZED)
+            try:
+                item = LearningPathItem.objects.get(
+                    pk=item_id,
+                    learning_path__created_by=request.user,
+                )
+            except LearningPathItem.DoesNotExist:
+                return Response({'detail': 'Item not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        # --- Extract stream URL, cached for 30 min ---
+        url_cache_key = f'yt_online_url:{item_id}'
+        stream_info = cache.get(url_cache_key)
+        if not stream_info:
+            try:
+                ydl_opts = {
+                    # 'best' selects the single best combined A/V format (~360–480p).
+                    # This avoids needing ffmpeg to merge separate DASH streams and
+                    # always returns a direct HTTPS URL we can proxy.
+                    'format': 'best',
+                    'quiet': True,
+                    'no_warnings': True,
+                }
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    info = ydl.extract_info(item.youtube_url, download=False)
+                stream_url = info.get('url')
+                if not stream_url:
+                    return Response(
+                        {'detail': 'Could not extract stream URL.'},
+                        status=status.HTTP_502_BAD_GATEWAY,
+                    )
+                ext = info.get('ext', 'mp4')
+                mime_map = {
+                    'mp4': 'video/mp4',
+                    'webm': 'video/webm',
+                    'm4v': 'video/mp4',
+                    'mov': 'video/quicktime',
+                }
+                stream_info = {
+                    'url': stream_url,
+                    'content_type': mime_map.get(ext, 'video/webm'),
+                    # yt-dlp provides the headers required to access the CDN URL
+                    'headers': dict(info.get('http_headers', {})),
+                }
+                cache.set(url_cache_key, stream_info, timeout=1800)
+            except Exception:
+                return Response(
+                    {'detail': 'Could not extract stream URL.'},
+                    status=status.HTTP_502_BAD_GATEWAY,
+                )
+
+        # --- Proxy the stream ---
+        proxy_headers = dict(stream_info.get('headers', {}))
+        range_header = request.META.get('HTTP_RANGE', '').strip()
+        if range_header:
+            proxy_headers['Range'] = range_header
+
+        try:
+            req = urllib.request.Request(stream_info['url'], headers=proxy_headers)
+            upstream = urllib.request.urlopen(req, timeout=30)
+        except (urllib.error.HTTPError, urllib.error.URLError, Exception):
+            # URL likely expired — clear cache so next request gets a fresh URL
+            cache.delete(url_cache_key)
+            return Response({'detail': 'Stream unavailable. Please retry.'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+        def _iter_content(conn, chunk_size=65536):
+            try:
+                while True:
+                    data = conn.read(chunk_size)
+                    if not data:
+                        break
+                    yield data
+            finally:
+                conn.close()
+
+        response = StreamingHttpResponse(
+            _iter_content(upstream),
+            status=upstream.getcode(),
+            content_type=stream_info['content_type'],
+        )
+        for header_name in ('Content-Range', 'Content-Length', 'Accept-Ranges'):
+            val = upstream.headers.get(header_name)
+            if val:
+                response[header_name] = val
+        return response
+
+
 class VideoServeView(APIView):
     """
     Stream a locally downloaded video file to the browser.

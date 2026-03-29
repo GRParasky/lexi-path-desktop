@@ -53,6 +53,7 @@ export default function VideoCard({
   // The browser's native media player can't send Authorization headers,
   // so we request a UUID token and append it as ?token= instead.
   const [videoToken, setVideoToken] = useState(null)
+  const [tokenError, setTokenError] = useState(false)
 
   // Prevent card click from opening theater right after a drag ends
   const justDragged = useRef(false)
@@ -93,15 +94,20 @@ export default function VideoCard({
     return () => clearInterval(interval)
   }, [downloadStatus, item.id])
 
-  // Fetch a video stream token whenever the theater opens with a local file.
-  // The token is passed as ?token= in the <video src> so the browser's media
-  // player can authenticate without sending custom headers.
+  // Fetch a video stream token whenever the theater opens.
+  // Used for both local files (/videos/serve/) and online streams (/videos/online-stream/).
+  // The token is passed as ?token= so the browser's media player can
+  // authenticate without sending custom Authorization headers.
   useEffect(() => {
-    if (!theater || !hasLocalFile) return
+    if (!theater) {
+      setVideoToken(null)
+      setTokenError(false)
+      return
+    }
     client.post(`/videos/token/${item.id}/`)
       .then(({ data }) => setVideoToken(data.token))
-      .catch(() => setVideoToken(null))
-  }, [theater, hasLocalFile, item.id])
+      .catch(() => setTokenError(true))
+  }, [theater, item.id])
 
   // ── Offline actions ────────────────────────────────────────────────────────
 
@@ -296,19 +302,20 @@ export default function VideoCard({
             <button className="theater-close" onClick={() => setTheater(false)}>✕</button>
 
             <div className="theater-player">
-              {hasLocalFile && videoToken ? (
+              {videoToken ? (
+                // Play via Django proxy — works for both local files and online
+                // streams. The backend uses yt-dlp to extract a direct CDN URL
+                // and proxies it, bypassing YouTube's iframe embedding restrictions.
                 <video
                   controls
                   autoPlay
-                  src={`/api/videos/serve/${item.id}/?token=${videoToken}`}
+                  src={hasLocalFile
+                    ? `/api/videos/serve/${item.id}/?token=${videoToken}`
+                    : `/api/videos/online-stream/${item.id}/?token=${videoToken}`
+                  }
                 />
-              ) : (
-                // Video not downloaded yet. Embedding YouTube via iframe is
-                // unreliable in Electron — some videos have embedding disabled
-                // (Error 153) and we can't detect this cross-origin. Instead,
-                // show the thumbnail and open the video in the system browser.
-                // setWindowOpenHandler in main.js intercepts window.open() and
-                // routes it through shell.openExternal automatically.
+              ) : tokenError ? (
+                // Token request failed (backend unreachable) — last-resort fallback
                 <div className="theater-yt-fallback">
                   <img
                     src={`https://i.ytimg.com/vi/${item.video_id}/hqdefault.jpg`}
@@ -323,6 +330,11 @@ export default function VideoCard({
                   >
                     ▶ {t('watchOnYouTube')}
                   </a>
+                </div>
+              ) : (
+                // Waiting for token response
+                <div className="theater-loading">
+                  <span className="spinner-sm" />
                 </div>
               )}
             </div>

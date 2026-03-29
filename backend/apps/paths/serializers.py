@@ -56,6 +56,10 @@ class LearningPathItemSerializer(serializers.ModelSerializer):
             # The file itself is left on disk; it becomes orphaned but harmless.
             instance.download_status = LearningPathItem.DOWNLOAD_NONE
             instance.local_file_path = ''
+            # Clear the cached online stream URL so the next theater open
+            # extracts a fresh URL for the new video.
+            from django.core.cache import cache
+            cache.delete(f'yt_online_url:{instance.pk}')
         return super().update(instance, validated_data)
 
 
