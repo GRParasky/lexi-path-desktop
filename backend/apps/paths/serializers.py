@@ -18,9 +18,9 @@ class LearningPathItemSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'title', 'youtube_url', 'video_id',
             'thumbnail_url', 'position', 'created_at',
-            'download_status', 'has_local_file',
+            'download_status', 'has_local_file', 'download_error',
         )
-        read_only_fields = ('video_id', 'thumbnail_url', 'created_at', 'download_status', 'has_local_file')
+        read_only_fields = ('video_id', 'thumbnail_url', 'created_at', 'download_status', 'has_local_file', 'download_error')
 
     def get_has_local_file(self, obj) -> bool:
         return bool(obj.local_file_path and Path(obj.local_file_path).exists())
@@ -56,6 +56,7 @@ class LearningPathItemSerializer(serializers.ModelSerializer):
             # The file itself is left on disk; it becomes orphaned but harmless.
             instance.download_status = LearningPathItem.DOWNLOAD_NONE
             instance.local_file_path = ''
+            instance.download_error = ''
             # Clear the cached online stream URL so the next theater open
             # extracts a fresh URL for the new video.
             from django.core.cache import cache

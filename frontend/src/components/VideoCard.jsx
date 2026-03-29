@@ -48,6 +48,7 @@ export default function VideoCard({
   const [downloadStatus, setDownloadStatus] = useState(item.download_status ?? 'none')
   const [hasLocalFile, setHasLocalFile] = useState(item.has_local_file ?? false)
   const [downloadProgress, setDownloadProgress] = useState(null) // 0-100 or null
+  const [downloadError, setDownloadError] = useState(item.download_error ?? '')
 
   // Short-lived token for the <video> src URL.
   // The browser's native media player can't send Authorization headers,
@@ -89,6 +90,7 @@ export default function VideoCard({
         setDownloadStatus(data.status)
         setDownloadProgress(data.progress ?? null)
         if (data.has_local_file) setHasLocalFile(true)
+        if (data.download_error) setDownloadError(data.download_error)
       } catch {
         setDownloadStatus('error')
       }
@@ -125,6 +127,7 @@ export default function VideoCard({
 
   const handleDownload = async () => {
     try {
+      setDownloadError('')
       const { data } = await client.post(`/videos/download/${item.id}/`)
       setDownloadStatus(data.status)
     } catch {
@@ -137,6 +140,7 @@ export default function VideoCard({
       await client.delete(`/videos/download/${item.id}/`)
       setDownloadStatus('none')
       setHasLocalFile(false)
+      setDownloadError('')
     } catch {
       // silently ignore — worst case the badge stays until next reload
     }
@@ -427,7 +431,14 @@ export default function VideoCard({
                     )}
                     {downloadStatus === 'error' && (
                       <>
-                        <span className="offline-status offline-status--error">{t('video.downloadFailed')}</span>
+                        <span className="offline-status offline-status--error" title={downloadError ? t(`video.error.${downloadError}`) : undefined}>
+                          {t('video.downloadFailed')}
+                        </span>
+                        {downloadError && (
+                          <span className="offline-error-reason">
+                            {t(`video.error.${downloadError}`, t('video.error.unknown'))}
+                          </span>
+                        )}
                         <button className="btn-ghost-sm" onClick={handleDownload}>
                           {t('video.retry')}
                         </button>

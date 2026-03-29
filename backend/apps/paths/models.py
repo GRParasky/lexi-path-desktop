@@ -58,6 +58,10 @@ class LearningPathItem(models.Model):
         choices=DOWNLOAD_STATUS_CHOICES,
         default=DOWNLOAD_NONE,
     )
+    # Reason code for the last failed download, cleared on success or retry.
+    # Values: 'bot_detection' | 'age_restricted' | 'geo_blocked' |
+    #         'premium_required' | 'members_only' | 'unavailable' | 'format_unavailable' | 'unknown'
+    download_error = models.CharField(max_length=30, blank=True)
 
     class Meta:
         ordering = ['position']

@@ -103,7 +103,17 @@
     "downloadToWatch": "Baixar e Assistir",
     "localFileError": "Não foi possível reproduzir o arquivo local. Tente remover e baixar o vídeo novamente.",
     "editVideo": "Editar título / URL",
-    "invalidUrl": "URL do YouTube inválida"
+    "invalidUrl": "URL do YouTube inválida",
+    "error": {
+      "bot_detection": "O YouTube bloqueou a solicitação. Tente novamente mais tarde.",
+      "age_restricted": "Este vídeo tem restrição de idade.",
+      "geo_blocked": "Este vídeo não está disponível na sua região.",
+      "premium_required": "Este vídeo requer o YouTube Premium.",
+      "members_only": "Este vídeo é exclusivo para membros do canal.",
+      "unavailable": "Este vídeo está indisponível ou é privado.",
+      "format_unavailable": "Nenhum formato disponível para download deste vídeo.",
+      "unknown": "O download falhou por um motivo desconhecido."
+    }
   },
   "progress": {
     "complete": "{{percentage}}% concluído"

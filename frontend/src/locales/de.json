@@ -103,7 +103,17 @@
     "downloadToWatch": "Herunterladen & Ansehen",
     "localFileError": "Die lokale Datei konnte nicht abgespielt werden. Versuche, das Video zu entfernen und erneut herunterzuladen.",
     "editVideo": "Titel / URL bearbeiten",
-    "invalidUrl": "Keine gültige YouTube-URL"
+    "invalidUrl": "Keine gültige YouTube-URL",
+    "error": {
+      "bot_detection": "YouTube hat die Anfrage blockiert. Versuche es später erneut.",
+      "age_restricted": "Dieses Video ist altersbeschränkt.",
+      "geo_blocked": "Dieses Video ist in deiner Region nicht verfügbar.",
+      "premium_required": "Dieses Video erfordert YouTube Premium.",
+      "members_only": "Dieses Video ist nur für Kanalmitglieder verfügbar.",
+      "unavailable": "Dieses Video ist nicht verfügbar oder privat.",
+      "format_unavailable": "Kein herunterladbares Format für dieses Video gefunden.",
+      "unknown": "Der Download ist aus einem unbekannten Grund fehlgeschlagen."
+    }
   },
   "progress": {
     "complete": "{{percentage}}% abgeschlossen"

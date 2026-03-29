@@ -29,6 +29,29 @@ def _token_key(token):      return f'video_token:{token}'
 _COOKIE_BROWSERS = ('firefox', 'brave', 'chrome', 'chromium', 'edge', 'opera', 'vivaldi', 'safari')
 
 
+def _parse_yt_dlp_error(exc: Exception) -> str:
+    """
+    Map a yt-dlp exception to a short reason code stored in download_error.
+    Keeps the frontend simple — it maps codes to localised strings.
+    """
+    msg = str(exc).lower()
+    if 'sign in' in msg or 'bot' in msg:
+        return 'bot_detection'
+    if 'age' in msg:
+        return 'age_restricted'
+    if 'country' in msg or 'region' in msg or 'not available in your' in msg:
+        return 'geo_blocked'
+    if 'member' in msg or 'join this channel' in msg:
+        return 'members_only'
+    if 'premium' in msg or 'payment' in msg:
+        return 'premium_required'
+    if 'private' in msg or 'removed' in msg or 'unavailable' in msg or 'deleted' in msg:
+        return 'unavailable'
+    if 'format' in msg or 'requested format' in msg:
+        return 'format_unavailable'
+    return 'unknown'
+
+
 def _is_bot_error(exc: Exception) -> bool:
     """Return True if the error is retryable with a different browser or cookies."""
     msg = str(exc).lower()
@@ -346,6 +369,7 @@ def _download_video_task(item_id: int, youtube_url: str, video_id: str) -> None:
         LearningPathItem.objects.filter(pk=item_id).update(
             local_file_path=str(final_path),
             download_status=LearningPathItem.DOWNLOAD_DONE,
+            download_error='',
         )
     except Exception as exc:
         import traceback
@@ -355,6 +379,7 @@ def _download_video_task(item_id: int, youtube_url: str, video_id: str) -> None:
         )
         LearningPathItem.objects.filter(pk=item_id).update(
             download_status=LearningPathItem.DOWNLOAD_ERROR,
+            download_error=_parse_yt_dlp_error(exc),
         )
 
 
@@ -392,7 +417,8 @@ class VideoDownloadView(APIView):
             return Response({'status': 'done', 'detail': 'Already downloaded.'})
 
         item.download_status = LearningPathItem.DOWNLOAD_DOWNLOADING
-        item.save(update_fields=['download_status'])
+        item.download_error = ''
+        item.save(update_fields=['download_status', 'download_error'])
 
         # daemon=True: thread dies with the process — no orphan threads if the app quits
         thread = threading.Thread(
@@ -412,8 +438,8 @@ class VideoDownloadView(APIView):
         return Response({
             'status': item.download_status,
             'has_local_file': bool(item.local_file_path and Path(item.local_file_path).exists()),
-            # progress is 0-100 while downloading, null otherwise
             'progress': cache.get(_progress_key(item_id)),
+            'download_error': item.download_error or '',
         })
 
     def delete(self, request, item_id):
@@ -429,6 +455,7 @@ class VideoDownloadView(APIView):
         LearningPathItem.objects.filter(pk=item.pk).update(
             local_file_path='',
             download_status=LearningPathItem.DOWNLOAD_NONE,
+            download_error='',
         )
         return Response({'status': 'none'})
 
