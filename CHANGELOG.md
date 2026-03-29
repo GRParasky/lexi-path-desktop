@@ -4,6 +4,25 @@ All notable changes to LexiPath Desktop are documented here.
 
 ---
 
+## [1.0.7] — 2026-03-28
+
+### Fixed
+- **Videos now play inside the app again** — the "Watch on YouTube" workaround introduced in v1.0.6 is replaced with real in-app playback. Opening theater mode now streams the video directly inside LexiPath without any browser redirect.
+
+### How it works
+- A new backend endpoint (`GET /api/videos/online-stream/{item_id}/`) uses yt-dlp to extract the direct YouTube CDN URL (no file saved to disk) and proxies the video bytes through the local Django server. This completely sidesteps YouTube's iframe embedding restrictions (Error 153) because the browser is talking to `localhost`, not youtube.com.
+- Online streaming uses the `best` single-file format (~480p) — no ffmpeg required to merge separate audio/video tracks. Users who want higher quality can still download the video offline as before.
+- The extracted CDN URL is cached for 30 minutes — seeking works instantly without re-calling yt-dlp on every Range request.
+- If the backend is unreachable (e.g. yt-dlp fails), the theater falls back to the YouTube link as a last resort.
+
+### Technical notes
+- `VideoOnlineStreamView` in `backend/apps/paths/views.py` — auth mirrors `VideoServeView` (Bearer JWT or `?token=` query param); Range headers are forwarded so the `<video>` element can seek; expired CDN URLs clear the cache automatically so the next open re-extracts
+- `GET /api/videos/online-stream/{item_id}/` added to `backend/apps/paths/urls.py`
+- `LearningPathItemSerializer.update()` now deletes the `yt_online_url:{id}` cache entry when the YouTube URL is changed, ensuring the new video is streamed immediately
+- `VideoCard.jsx` token effect now runs on every theater open (not only for downloaded videos); theater player chooses `/videos/serve/` (local file) or `/videos/online-stream/` (online) based on `hasLocalFile`; loading spinner shown while the token request is in flight
+
+---
+
 ## [1.0.6] — 2026-03-28
 
 ### Added
