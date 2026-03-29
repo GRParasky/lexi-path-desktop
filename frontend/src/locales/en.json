@@ -99,6 +99,7 @@
     "removeVideo": "Remove this video?",
     "yesDelete": "Yes, delete",
     "watchOnYouTube": "Watch on YouTube",
+    "connecting": "Connecting to video…",
     "dashOnlyMessage": "This video can only be played after downloading. Download it now to watch offline.",
     "downloadToWatch": "Download & Watch",
     "localFileError": "Could not play the local file. Try removing and re-downloading the video.",

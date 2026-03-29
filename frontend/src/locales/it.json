@@ -99,6 +99,7 @@
     "removeVideo": "Rimuovere questo video?",
     "yesDelete": "Sì, elimina",
     "watchOnYouTube": "Guarda su YouTube",
+    "connecting": "Connessione al video…",
     "dashOnlyMessage": "Questo video può essere riprodotto solo dopo il download. Scaricalo ora per guardarlo offline.",
     "downloadToWatch": "Scarica e guarda",
     "localFileError": "Impossibile riprodurre il file locale. Prova a rimuovere e scaricare nuovamente il video.",

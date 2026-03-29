@@ -42,6 +42,12 @@ export default function VideoCard({
   const [cardConfirmDelete, setCardConfirmDelete] = useState(false)
   const [cardDeleting, setCardDeleting] = useState(false)
 
+  // Online stream state — for non-downloaded videos in theater mode.
+  // We try to stream via /api/videos/online-stream/ first; if yt-dlp fails
+  // or the format isn't available, fall back to Download & Watch / Watch on YouTube.
+  const [onlineStreamFailed, setOnlineStreamFailed] = useState(false)
+  const [onlineStreamLoading, setOnlineStreamLoading] = useState(false)
+
   // Offline video state — initialised from the API response.
   // download_status: 'none' | 'downloading' | 'done' | 'error'
   // has_local_file: true only when the file physically exists on disk
@@ -110,18 +116,19 @@ export default function VideoCard({
       setUseNativeProtocol(true)
       setTokenError(false)
       setVideoError(false)
+      setOnlineStreamFailed(false)
+      setOnlineStreamLoading(false)
       return
     }
-    // Only fetch a token when the video has been downloaded locally.
-    // Online videos use the YouTube iframe and don't need a token.
-    if (!hasLocalFile) return
+    // Token is used for both local serve and online stream endpoints —
+    // always fetch it when theater opens, regardless of download status.
     client.post(`/videos/token/${item.id}/`)
       .then(({ data }) => {
         setVideoToken(data.token)
         setLocalPath(data.local_path || null)
       })
       .catch(() => setTokenError(true))
-  }, [theater, item.id, hasLocalFile])
+  }, [theater, item.id])
 
   // ── Offline actions ────────────────────────────────────────────────────────
 
@@ -347,36 +354,57 @@ export default function VideoCard({
                   <div className="theater-loading"><span className="spinner-sm" /></div>
                 )
               ) : (
-                // Not downloaded — Electron runs an isolated Chromium with no
-                // YouTube cookies, so iframes always trigger bot detection.
-                // Show a clear prompt instead: download to watch offline (primary)
-                // or open in the user's real browser (secondary).
-                <div className="theater-not-downloaded">
-                  <img
-                    src={`https://i.ytimg.com/vi/${item.video_id}/hqdefault.jpg`}
-                    alt={item.title}
-                    className="theater-not-downloaded__thumb"
-                  />
-                  <div className="theater-not-downloaded__actions">
-                    {!readOnly && (
-                      <button
-                        className="btn-primary theater-not-downloaded__download"
-                        onClick={() => { setTheater(false); handleDownload() }}
-                        disabled={downloadStatus === 'downloading'}
+                // Not downloaded — try online streaming via yt-dlp proxy first.
+                // If extraction fails (bot detection, DASH-only, unavailable),
+                // onError fires and we fall back to Download & Watch / Watch on YouTube.
+                (!videoToken && !tokenError) ? (
+                  <div className="theater-loading"><span className="spinner-sm" /></div>
+                ) : (tokenError || onlineStreamFailed) ? (
+                  <div className="theater-not-downloaded">
+                    <img
+                      src={`https://i.ytimg.com/vi/${item.video_id}/hqdefault.jpg`}
+                      alt={item.title}
+                      className="theater-not-downloaded__thumb"
+                    />
+                    <div className="theater-not-downloaded__actions">
+                      {!readOnly && (
+                        <button
+                          className="btn-primary theater-not-downloaded__download"
+                          onClick={() => { setTheater(false); handleDownload() }}
+                          disabled={downloadStatus === 'downloading'}
+                        >
+                          ⬇ {t('video.downloadToWatch')}
+                        </button>
+                      )}
+                      <a
+                        href={`https://www.youtube.com/watch?v=${item.video_id}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="theater-not-downloaded__external"
                       >
-                        ⬇ {t('video.downloadToWatch')}
-                      </button>
-                    )}
-                    <a
-                      href={`https://www.youtube.com/watch?v=${item.video_id}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="theater-not-downloaded__external"
-                    >
-                      ↗ {t('watchOnYouTube')}
-                    </a>
+                        ↗ {t('video.watchOnYouTube')}
+                      </a>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <>
+                    {onlineStreamLoading && (
+                      <div className="theater-loading">
+                        <span className="spinner-sm" />
+                        <span className="theater-loading__label">{t('video.connecting')}</span>
+                      </div>
+                    )}
+                    <video
+                      controls
+                      autoPlay
+                      style={onlineStreamLoading ? { display: 'none' } : undefined}
+                      src={`/api/videos/online-stream/${item.id}/?token=${videoToken}`}
+                      onLoadStart={() => setOnlineStreamLoading(true)}
+                      onCanPlay={() => setOnlineStreamLoading(false)}
+                      onError={() => { setOnlineStreamLoading(false); setOnlineStreamFailed(true) }}
+                    />
+                  </>
+                )
               )}
             </div>
 

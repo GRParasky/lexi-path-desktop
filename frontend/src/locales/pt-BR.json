@@ -99,6 +99,7 @@
     "removeVideo": "Remover este vídeo?",
     "yesDelete": "Sim, excluir",
     "watchOnYouTube": "Assistir no YouTube",
+    "connecting": "Conectando ao vídeo…",
     "dashOnlyMessage": "Este vídeo só pode ser assistido após o download. Baixe agora para assistir offline.",
     "downloadToWatch": "Baixar e Assistir",
     "localFileError": "Não foi possível reproduzir o arquivo local. Tente remover e baixar o vídeo novamente.",

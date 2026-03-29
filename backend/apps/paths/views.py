@@ -558,6 +558,61 @@ class VideoDiagView(APIView):
         return Response({'item_id': item_id, 'youtube_url': item.youtube_url, 'results': results})
 
 
+def _ffmpeg_merge_response(ffmpeg_info: dict) -> StreamingHttpResponse:
+    """
+    Spawn ffmpeg to merge separate DASH video+audio CDN streams and pipe the
+    result as a fragmented MP4 to the browser.
+
+    The output is a continuous byte stream — Range requests are not supported,
+    so scrubbing in the player won't work.  The video plays from start to end.
+
+    ffmpeg flags:
+      frag_keyframe  — emit a new fragment at each keyframe (low latency start)
+      empty_moov     — place a minimal moov atom at the front so Chromium can
+                       start decoding immediately without buffering the whole file
+    """
+    import subprocess
+
+    headers = ffmpeg_info.get('headers', {})
+    # ffmpeg -headers expects "Key: Value\r\n" concatenated for each header
+    hdrs_str = ''.join(f'{k}: {v}\r\n' for k, v in headers.items())
+
+    cmd = [
+        'ffmpeg', '-loglevel', 'error',
+        '-headers', hdrs_str, '-i', ffmpeg_info['video_url'],
+        '-headers', hdrs_str, '-i', ffmpeg_info['audio_url'],
+        '-c', 'copy',
+        '-f', 'mp4', '-movflags', 'frag_keyframe+empty_moov',
+        'pipe:1',
+    ]
+
+    try:
+        proc = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+        )
+    except Exception as exc:
+        _yt_logger().error('_ffmpeg_merge_response: Popen failed: %s', exc)
+        return StreamingHttpResponse(iter([]), content_type='video/mp4', status=500)
+
+    def _iter(process, chunk=65536):
+        try:
+            while True:
+                data = process.stdout.read(chunk)
+                if not data:
+                    break
+                yield data
+        finally:
+            # Always clean up the subprocess, even if the client disconnects.
+            process.kill()
+            process.wait()
+
+    response = StreamingHttpResponse(_iter(proc), content_type='video/mp4', status=200)
+    # Omit Accept-Ranges: the pipe stream is not seekable.
+    return response
+
+
 class VideoOnlineStreamView(APIView):
     """
     Stream a YouTube video in real-time without downloading it.
@@ -598,100 +653,190 @@ class VideoOnlineStreamView(APIView):
                 return Response({'detail': 'Item not found.'}, status=status.HTTP_404_NOT_FOUND)
 
         # --- Extract stream URL, cached for 30 min ---
-        url_cache_key = f'yt_online_url:{item_id}'
+        url_cache_key  = f'yt_online_url:{item_id}'
+        ffmpeg_cache_key = f'yt_online_ffmpeg:{item_id}'
+        dash_cache_key = f'yt_online_dash_only:{item_id}'
+
+        mime_map = {
+            'mp4': 'video/mp4',
+            'webm': 'video/webm',
+            'm4v': 'video/mp4',
+            'mov': 'video/quicktime',
+        }
+
         stream_info = cache.get(url_cache_key)
         if not stream_info:
-            try:
-                logger = _yt_logger()
+            logger = _yt_logger()
 
+            # Fast path: cached DASH+ffmpeg CDN URLs — skip yt-dlp extraction.
+            ffmpeg_cached = cache.get(ffmpeg_cache_key)
+            if ffmpeg_cached:
+                return _ffmpeg_merge_response(ffmpeg_cached)
+
+            # Fast path: known DASH-only without ffmpeg — skip yt-dlp entirely.
+            if cache.get(dash_cache_key):
+                return Response(
+                    {
+                        'type': 'no_combined_format',
+                        'detail': 'This video is only available in DASH streams. Download it to watch offline.',
+                    },
+                    status=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                )
+
+            # ── Step 1: try combined progressive format (fast, no ffmpeg needed) ──
+            # Use an explicit format selector so yt-dlp actually resolves the CDN
+            # URL.  Without a selector, the formats[] list entries have empty 'url'
+            # fields — making manual scanning useless.
+            #   22  = 720p progressive mp4  (combined A/V)
+            #   18  = 360p progressive mp4  (combined A/V)
+            # If NONE exist, yt-dlp raises "Requested format is not available".
+            step1_failed = False
+            try:
                 ydl_opts = {
-                    # No 'format' key: fetch all available formats so we can
-                    # pick the best combined A/V one manually without yt-dlp
-                    # raising "Requested format is not available" when YouTube
-                    # no longer provides legacy combined streams for a video.
+                    'format': '22/18/best[acodec!=none][vcodec!=none]',
                     'noplaylist': True,
                     'quiet': True,
                     'no_warnings': True,
                 }
                 info = _yt_extract_info(item.youtube_url, ydl_opts)
-
-                mime_map = {
-                    'mp4': 'video/mp4',
-                    'webm': 'video/webm',
-                    'm4v': 'video/mp4',
-                    'mov': 'video/quicktime',
-                }
-                ext = info.get('ext', 'mp4')
-                http_headers = info.get('http_headers', {})
-                stream_url = None
-
-                formats = info.get('formats', [])
-
-                # Priority 1: legacy progressive formats (single combined A/V file).
-                # Format 18 = 360p mp4, format 22 = 720p mp4 — YouTube still
-                # provides these for most videos and they have a direct URL.
-                for fmt_id in ('22', '18'):
-                    fmt = next(
-                        (f for f in formats if f.get('format_id') == fmt_id and f.get('url')),
-                        None,
-                    )
-                    if fmt:
-                        stream_url = fmt['url']
-                        ext = fmt.get('ext', ext)
-                        http_headers = fmt.get('http_headers', http_headers)
-                        break
-
-                # Priority 2: any other combined A/V format, best quality first.
+                stream_url = info.get('url')
                 if not stream_url:
-                    combined = [
-                        f for f in formats
-                        if f.get('url')
-                        and f.get('acodec', 'none') != 'none'
-                        and f.get('vcodec', 'none') != 'none'
-                    ]
-                    if combined:
-                        best = max(combined, key=lambda f: (f.get('height') or 0, f.get('tbr') or 0))
-                        stream_url = best['url']
-                        ext = best.get('ext', ext)
-                        http_headers = best.get('http_headers', http_headers)
-
-                # Priority 3: yt-dlp already resolved a top-level url
-                if not stream_url:
-                    stream_url = info.get('url')
-
-                if not stream_url:
-                    # This video only has DASH streams (separate video+audio).
-                    # The browser cannot play them without merging — the user
-                    # must download the video first.
+                    step1_failed = True
+                else:
+                    ext = info.get('ext', 'mp4')
+                    stream_info = {
+                        'url': stream_url,
+                        'content_type': mime_map.get(ext, 'video/mp4'),
+                        'headers': dict(info.get('http_headers', {})),
+                    }
+                    cache.set(url_cache_key, stream_info, timeout=1800)
+            except Exception as exc:
+                msg = str(exc).lower()
+                if 'requested format' in msg or 'no video formats' in msg:
+                    step1_failed = True
+                else:
+                    import traceback
                     logger.error(
-                        'VideoOnlineStreamView: no combined A/V format for item %s '
-                        '(DASH-only video). formats count: %d',
-                        item_id, len(formats),
+                        'VideoOnlineStreamView: yt-dlp error for item %s: %s\n%s',
+                        item_id, exc, traceback.format_exc()
                     )
+                    return Response(
+                        {'detail': f'Stream extraction failed: {exc}'},
+                        status=status.HTTP_502_BAD_GATEWAY,
+                    )
+
+            if step1_failed:
+                # ── Step 2: DASH-only — merge streams via ffmpeg ──
+                # yt-dlp downloads (bestvideo+bestaudio) already rely on ffmpeg.
+                # Here we pipe the merge to the browser instead of saving to disk.
+                # Trade-off: video plays fine but scrubbing is not supported.
+                import shutil
+                if not shutil.which('ffmpeg'):
+                    logger.info(
+                        'VideoOnlineStreamView: DASH-only, ffmpeg not found for item %s', item_id
+                    )
+                    cache.set(dash_cache_key, True, timeout=300)
                     return Response(
                         {
                             'type': 'no_combined_format',
-                            'detail': 'This video is only available in DASH streams and cannot be played directly. Download it first.',
+                            'detail': 'This video is only available in DASH streams. Download it to watch offline.',
                         },
                         status=status.HTTP_422_UNPROCESSABLE_ENTITY,
                     )
 
-                stream_info = {
-                    'url': stream_url,
-                    'content_type': mime_map.get(ext, 'video/webm'),
-                    'headers': dict(http_headers),
-                }
-                cache.set(url_cache_key, stream_info, timeout=1800)
-            except Exception as exc:
-                import traceback
-                _yt_logger().error(
-                    'VideoOnlineStreamView: yt-dlp extraction failed for item %s: %s\n%s',
-                    item_id, exc, traceback.format_exc()
-                )
-                return Response(
-                    {'detail': f'Stream extraction failed: {exc}'},
-                    status=status.HTTP_502_BAD_GATEWAY,
-                )
+                try:
+                    ydl_opts_dash = {
+                        # Prefer mp4+m4a so ffmpeg outputs clean mp4; fall back
+                        # to any best video+audio combination.
+                        'format': (
+                            'bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]'
+                            '/bestvideo[height<=720]+bestaudio'
+                            '/best'
+                        ),
+                        'noplaylist': True,
+                        'quiet': True,
+                        'no_warnings': True,
+                    }
+                    dash_info = _yt_extract_info(item.youtube_url, ydl_opts_dash)
+                except Exception as exc:
+                    import traceback
+                    logger.error(
+                        'VideoOnlineStreamView: DASH extraction failed for item %s: %s\n%s',
+                        item_id, exc, traceback.format_exc()
+                    )
+                    cache.set(dash_cache_key, True, timeout=300)
+                    return Response(
+                        {
+                            'type': 'no_combined_format',
+                            'detail': 'This video is only available in DASH streams. Download it to watch offline.',
+                        },
+                        status=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    )
+
+                requested_fmts = dash_info.get('requested_formats', [])
+
+                if not requested_fmts:
+                    # yt-dlp resolved a single combined URL after all — use it.
+                    single_url = dash_info.get('url')
+                    if single_url:
+                        ext = dash_info.get('ext', 'mp4')
+                        stream_info = {
+                            'url': single_url,
+                            'content_type': mime_map.get(ext, 'video/mp4'),
+                            'headers': dict(dash_info.get('http_headers', {})),
+                        }
+                        cache.set(url_cache_key, stream_info, timeout=1800)
+                    else:
+                        cache.set(dash_cache_key, True, timeout=300)
+                        return Response(
+                            {
+                                'type': 'no_combined_format',
+                                'detail': 'This video is only available in DASH streams. Download it to watch offline.',
+                            },
+                            status=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                        )
+                else:
+                    # Separate video + audio DASH streams → pipe through ffmpeg.
+                    video_fmt = next(
+                        (f for f in requested_fmts if f.get('vcodec') not in (None, 'none', '')),
+                        None,
+                    )
+                    audio_fmt = next(
+                        (
+                            f for f in requested_fmts
+                            if f.get('acodec') not in (None, 'none', '')
+                            and f.get('vcodec') in (None, 'none', '')
+                        ),
+                        None,
+                    )
+
+                    if not (video_fmt and audio_fmt
+                            and video_fmt.get('url') and audio_fmt.get('url')):
+                        logger.error(
+                            'VideoOnlineStreamView: could not isolate DASH streams for item %s', item_id
+                        )
+                        cache.set(dash_cache_key, True, timeout=300)
+                        return Response(
+                            {
+                                'type': 'no_combined_format',
+                                'detail': 'This video is only available in DASH streams. Download it to watch offline.',
+                            },
+                            status=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                        )
+
+                    ffmpeg_info = {
+                        'video_url': video_fmt['url'],
+                        'audio_url': audio_fmt['url'],
+                        # Both streams share the same CDN auth headers.
+                        'headers': dict(video_fmt.get('http_headers', {})),
+                    }
+                    # Cache CDN URLs for 10 min (YouTube CDN URLs expire in hours,
+                    # but we refresh conservatively to avoid 403s mid-session).
+                    cache.set(ffmpeg_cache_key, ffmpeg_info, timeout=600)
+                    logger.info(
+                        'VideoOnlineStreamView: streaming DASH via ffmpeg for item %s', item_id
+                    )
+                    return _ffmpeg_merge_response(ffmpeg_info)
 
         # --- Proxy the stream ---
         proxy_headers = dict(stream_info.get('headers', {}))
