@@ -222,6 +222,6 @@ electron/dist/
 backend/videos/
 
 # Claude files
-claude_raw_logs/
 CLAUDE.md
 context.md
+docs/raw_logs
