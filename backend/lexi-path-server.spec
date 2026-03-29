@@ -30,6 +30,10 @@ datas = []
 datas += collect_data_files('django')
 datas += collect_data_files('rest_framework')
 datas += collect_data_files('whitenoise')
+# certifi ships a cacert.pem bundle.  Without it, the frozen binary has no CA
+# certificates and every HTTPS connection (yt-dlp, urllib, requests) raises
+# CERTIFICATE_VERIFY_FAILED.  run_server.py sets SSL_CERT_FILE to this path.
+datas += collect_data_files('certifi')
 
 # Local app migrations — Django reads these at runtime to run `migrate`.
 # They are plain .py files but PyInstaller only auto-includes imported modules,

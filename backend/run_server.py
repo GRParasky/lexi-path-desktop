@@ -94,8 +94,31 @@ def _save_migration_hash(data_dir: Path) -> None:
         pass  # Non-critical — worst case, migrate runs again next launch
 
 
+def _configure_ssl() -> None:
+    """
+    Point Python's SSL stack to certifi's CA bundle.
+
+    When frozen by PyInstaller, the system's SSL certificate paths are not
+    available to the bundled Python interpreter, causing all HTTPS connections
+    (yt-dlp, requests, urllib) to fail with CERTIFICATE_VERIFY_FAILED.
+    Setting these two env vars before any network code runs is the standard fix.
+    They are no-ops when the vars are already set by the OS (dev mode).
+    """
+    try:
+        import certifi
+        ca_bundle = certifi.where()
+        os.environ.setdefault('SSL_CERT_FILE', ca_bundle)
+        os.environ.setdefault('REQUESTS_CA_BUNDLE', ca_bundle)
+    except ImportError:
+        pass  # certifi not installed — fall back to system certs (dev mode)
+
+
 def main():
     data_dir = _get_data_dir()
+
+    # SSL must be configured before any import that might open a network
+    # connection (including Django's startup checks).
+    _configure_ssl()
 
     os.environ.setdefault('APP_DATA_DIR', str(data_dir))
     os.environ.setdefault('SECRET_KEY', _get_or_create_secret_key(data_dir))
