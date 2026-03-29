@@ -442,11 +442,15 @@ input:focus { outline: none; border-color: var(--accent); }
 }
 .card-edit-input:focus { outline: none; border-color: var(--accent); }
 .card-edit-error { font-size: 0.72rem; color: var(--danger); }
-.card-edit-actions,
-.card-confirm-actions {
+.card-edit-actions {
   display: flex;
   gap: 0.4rem;
   justify-content: flex-end;
+}
+.card-confirm-actions {
+  display: flex;
+  gap: 0.4rem;
+  justify-content: center;
 }
 .card-confirm { text-align: center; width: 100%; }
 .card-confirm p { font-size: 0.85rem; margin-bottom: 0.75rem; }
