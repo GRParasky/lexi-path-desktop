@@ -21,6 +21,24 @@ def _progress_key(item_id): return f'download_progress:{item_id}'
 def _token_key(token):      return f'video_token:{token}'
 
 
+def _yt_logger():
+    """
+    Return a logger that writes to {APP_DATA_DIR}/lexi-debug.log.
+    Falls back to the standard Django logger if APP_DATA_DIR is not set.
+    """
+    import logging
+    import os
+    logger = logging.getLogger('lexi.yt_dlp')
+    if not logger.handlers:
+        data_dir = os.environ.get('APP_DATA_DIR', '')
+        if data_dir:
+            fh = logging.FileHandler(os.path.join(data_dir, 'lexi-debug.log'), encoding='utf-8')
+            fh.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(message)s'))
+            logger.addHandler(fh)
+        logger.setLevel(logging.DEBUG)
+    return logger
+
+
 class LearningPathViewSet(viewsets.ModelViewSet):
     serializer_class = LearningPathSerializer
     permission_classes = [IsAuthenticated]
@@ -252,6 +270,9 @@ def _download_video_task(item_id: int, youtube_url: str, video_id: str) -> None:
         'outtmpl': output_template,
         # No merge_output_format: let yt-dlp produce whatever it can.
         # With ffmpeg: merges to mkv/mp4. Without ffmpeg: downloads best single file.
+        # noplaylist: same reason as VideoOnlineStreamView — playlist URLs must
+        # only download the specific video, not the entire playlist.
+        'noplaylist': True,
         'quiet': True,
         'no_warnings': True,
         'progress_hooks': [_progress_hook],
@@ -269,8 +290,8 @@ def _download_video_task(item_id: int, youtube_url: str, video_id: str) -> None:
             download_status=LearningPathItem.DOWNLOAD_DONE,
         )
     except Exception as exc:
-        import logging, traceback
-        logging.getLogger(__name__).error(
+        import traceback
+        _yt_logger().error(
             'Download failed for item %s (%s): %s\n%s',
             item_id, youtube_url, exc, traceback.format_exc()
         )
@@ -385,6 +406,66 @@ class VideoTokenView(APIView):
         return Response({'token': token})
 
 
+class VideoDiagView(APIView):
+    """
+    GET /api/videos/diag/{item_id}/   (authenticated)
+
+    Temporary diagnostic endpoint: runs yt-dlp extract_info for a video item
+    and returns either the extracted URL info or the full error traceback as
+    plain text.  This lets us see exactly what yt-dlp is doing in any
+    environment without relying on dev-tools response capture.
+
+    Remove this view once the streaming issue is diagnosed and fixed.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, item_id):
+        import traceback
+        import yt_dlp
+
+        try:
+            item = LearningPathItem.objects.get(
+                pk=item_id,
+                learning_path__created_by=request.user,
+            )
+        except LearningPathItem.DoesNotExist:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        results = {}
+        for fmt_label, fmt_string in [
+            ('best_combined',    'best[acodec!=none][vcodec!=none]'),
+            ('best_with_audio',  'best[acodec!=none]'),
+            ('best_fallback',    'best'),
+            ('format_18',        '18'),
+        ]:
+            try:
+                ydl_opts = {
+                    'format': fmt_string,
+                    'noplaylist': True,
+                    'quiet': True,
+                    'no_warnings': True,
+                }
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    info = ydl.extract_info(item.youtube_url, download=False)
+                results[fmt_label] = {
+                    'ok': True,
+                    'url_present': bool(info.get('url')),
+                    'keys': sorted(info.keys()),
+                    'ext': info.get('ext'),
+                    'height': info.get('height'),
+                    'requested_formats_count': len(info.get('requested_formats', [])),
+                }
+            except Exception as exc:
+                results[fmt_label] = {
+                    'ok': False,
+                    'error': str(exc),
+                    'traceback': traceback.format_exc(),
+                }
+
+        _yt_logger().info('VideoDiagView results for item %s: %s', item_id, results)
+        return Response({'item_id': item_id, 'youtube_url': item.youtube_url, 'results': results})
+
+
 class VideoOnlineStreamView(APIView):
     """
     Stream a YouTube video in real-time without downloading it.
@@ -431,8 +512,7 @@ class VideoOnlineStreamView(APIView):
         stream_info = cache.get(url_cache_key)
         if not stream_info:
             try:
-                import logging
-                logger = logging.getLogger(__name__)
+                logger = _yt_logger()
 
                 ydl_opts = {
                     # Explicitly request a single combined A/V format.
@@ -442,6 +522,11 @@ class VideoOnlineStreamView(APIView):
                     # This selector picks the best format that has BOTH audio and
                     # video in a single file (typically ~360–480p for YouTube).
                     'format': 'best[acodec!=none][vcodec!=none]/best[acodec!=none]',
+                    # noplaylist: if the URL contains &list=..., extract only the
+                    # specific video (v=...) and ignore the surrounding playlist.
+                    # Without this, yt-dlp returns a playlist dict with 'entries'
+                    # instead of a single video dict with 'url' → 502 Bad Gateway.
+                    'noplaylist': True,
                     'quiet': True,
                     'no_warnings': True,
                 }
@@ -498,8 +583,8 @@ class VideoOnlineStreamView(APIView):
                 }
                 cache.set(url_cache_key, stream_info, timeout=1800)
             except Exception as exc:
-                import logging, traceback
-                logging.getLogger(__name__).error(
+                import traceback
+                _yt_logger().error(
                     'VideoOnlineStreamView: yt-dlp extraction failed for item %s: %s\n%s',
                     item_id, exc, traceback.format_exc()
                 )

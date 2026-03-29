@@ -4,6 +4,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     LearningPathItemViewSet,
     LearningPathViewSet,
+    VideoDiagView,
     VideoDownloadView,
     VideoOnlineStreamView,
     VideoServeView,
@@ -35,4 +36,5 @@ urlpatterns = [
     path('videos/download/<int:item_id>/',      VideoDownloadView.as_view(),     name='video-download'),
     path('videos/serve/<int:item_id>/',         VideoServeView.as_view(),        name='video-serve'),
     path('videos/online-stream/<int:item_id>/', VideoOnlineStreamView.as_view(), name='video-online-stream'),
+    path('videos/diag/<int:item_id>/',          VideoDiagView.as_view(),         name='video-diag'),
 ]
