@@ -99,6 +99,9 @@
     "removeVideo": "¿Eliminar este video?",
     "yesDelete": "Sí, eliminar",
     "watchOnYouTube": "Ver en YouTube",
+    "dashOnlyMessage": "Este video solo se puede reproducir después de descargarlo. Descárgalo ahora para verlo sin conexión.",
+    "downloadToWatch": "Descargar y ver",
+    "localFileError": "No se pudo reproducir el archivo local. Intenta eliminar y volver a descargar el video.",
     "editVideo": "Editar título / URL",
     "invalidUrl": "URL de YouTube no válida"
   },

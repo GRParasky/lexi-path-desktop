@@ -569,6 +569,41 @@ input:focus { outline: none; border-color: var(--accent); }
 }
 .theater-yt-fallback__btn:hover { background: #cc0000; }
 
+.theater-not-downloaded {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  gap: 1.5rem;
+  background: #000;
+}
+.theater-not-downloaded__thumb {
+  width: 100%;
+  max-width: 480px;
+  border-radius: 6px;
+  opacity: 0.6;
+}
+.theater-not-downloaded__actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+.theater-not-downloaded__download {
+  font-size: 1rem;
+  padding: 0.65rem 1.5rem;
+  border-radius: 6px;
+}
+.theater-not-downloaded__external {
+  font-size: 0.85rem;
+  color: var(--text-muted, #aaa);
+  text-decoration: none;
+  opacity: 0.8;
+}
+.theater-not-downloaded__external:hover { opacity: 1; text-decoration: underline; }
+
 .theater-footer {
   display: flex;
   align-items: center;

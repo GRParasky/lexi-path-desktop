@@ -1,9 +1,26 @@
 'use strict'
 
-const { app, BrowserWindow, shell, dialog } = require('electron')
+const { app, BrowserWindow, shell, dialog, protocol, net } = require('electron')
 const { autoUpdater } = require('electron-updater')
 const path = require('path')
+const { pathToFileURL } = require('url')
 const { spawn } = require('child_process')
+
+// Register the lexipath:// scheme BEFORE app is ready.
+// This scheme is used to serve local video files natively without routing
+// them through the Django/Python stack, giving native C++ performance and
+// proper Range-request support for video seeking.
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'lexipath',
+    privileges: {
+      secure: true,       // treated as a secure origin (no mixed-content warnings)
+      stream: true,       // enables streaming responses (required for video)
+      supportFetchAPI: true,
+      corsEnabled: true,
+    },
+  },
+])
 
 // ----------------------------------------------------------------------------
 // Constants
@@ -183,6 +200,22 @@ function createWindow(url) {
 // ----------------------------------------------------------------------------
 
 app.whenReady().then(async () => {
+  // Serve local video files natively when the frontend requests lexipath://video?path=...
+  // This completely bypasses the Django/Waitress stack for downloaded videos,
+  // eliminating the lag and crash issues from streaming large files through Python.
+  protocol.handle('lexipath', (request) => {
+    const url = new URL(request.url)
+    const filePath = url.searchParams.get('path')
+    if (!filePath) {
+      return new Response('Missing path parameter', { status: 400 })
+    }
+    const fileUrl = pathToFileURL(filePath).toString()
+    // Forward all original headers (especially Range) so video seeking works
+    return net.fetch(fileUrl, {
+      headers: Object.fromEntries(request.headers),
+    })
+  })
+
   if (app.isPackaged) {
     // --- Production / packaged mode ---
     // Show a loading screen immediately so the user sees something,

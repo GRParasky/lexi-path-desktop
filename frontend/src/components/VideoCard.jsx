@@ -53,7 +53,10 @@ export default function VideoCard({
   // The browser's native media player can't send Authorization headers,
   // so we request a UUID token and append it as ?token= instead.
   const [videoToken, setVideoToken] = useState(null)
+  const [localPath, setLocalPath] = useState(null)
+  const [useNativeProtocol, setUseNativeProtocol] = useState(true)
   const [tokenError, setTokenError] = useState(false)
+  const [videoError, setVideoError] = useState(false)
 
   // Prevent card click from opening theater right after a drag ends
   const justDragged = useRef(false)
@@ -101,13 +104,22 @@ export default function VideoCard({
   useEffect(() => {
     if (!theater) {
       setVideoToken(null)
+      setLocalPath(null)
+      setUseNativeProtocol(true)
       setTokenError(false)
+      setVideoError(false)
       return
     }
+    // Only fetch a token when the video has been downloaded locally.
+    // Online videos use the YouTube iframe and don't need a token.
+    if (!hasLocalFile) return
     client.post(`/videos/token/${item.id}/`)
-      .then(({ data }) => setVideoToken(data.token))
+      .then(({ data }) => {
+        setVideoToken(data.token)
+        setLocalPath(data.local_path || null)
+      })
       .catch(() => setTokenError(true))
-  }, [theater, item.id])
+  }, [theater, item.id, hasLocalFile])
 
   // ── Offline actions ────────────────────────────────────────────────────────
 
@@ -302,39 +314,64 @@ export default function VideoCard({
             <button className="theater-close" onClick={() => setTheater(false)}>✕</button>
 
             <div className="theater-player">
-              {videoToken ? (
-                // Play via Django proxy — works for both local files and online
-                // streams. The backend uses yt-dlp to extract a direct CDN URL
-                // and proxies it, bypassing YouTube's iframe embedding restrictions.
-                <video
-                  controls
-                  autoPlay
-                  src={hasLocalFile
-                    ? `/api/videos/serve/${item.id}/?token=${videoToken}`
-                    : `/api/videos/online-stream/${item.id}/?token=${videoToken}`
-                  }
-                />
-              ) : tokenError ? (
-                // Token request failed (backend unreachable) — last-resort fallback
-                <div className="theater-yt-fallback">
+              {hasLocalFile ? (
+                // Downloaded video — served natively via Electron's lexipath://
+                // protocol (bypasses Python entirely). Falls back to Django proxy
+                // if lexipath:// is not available (browser dev mode).
+                videoToken ? (
+                  <video
+                    controls
+                    autoPlay
+                    src={
+                      localPath && useNativeProtocol
+                        ? `lexipath://video?path=${encodeURIComponent(localPath)}`
+                        : `/api/videos/serve/${item.id}/?token=${videoToken}`
+                    }
+                    onError={() => {
+                      if (localPath && useNativeProtocol) {
+                        setUseNativeProtocol(false) // retry with Django proxy
+                      } else {
+                        setVideoError(true)
+                      }
+                    }}
+                  />
+                ) : tokenError || videoError ? (
+                  <div className="theater-yt-fallback">
+                    <p className="theater-yt-fallback__msg">{t('video.localFileError')}</p>
+                  </div>
+                ) : (
+                  <div className="theater-loading"><span className="spinner-sm" /></div>
+                )
+              ) : (
+                // Not downloaded — Electron runs an isolated Chromium with no
+                // YouTube cookies, so iframes always trigger bot detection.
+                // Show a clear prompt instead: download to watch offline (primary)
+                // or open in the user's real browser (secondary).
+                <div className="theater-not-downloaded">
                   <img
                     src={`https://i.ytimg.com/vi/${item.video_id}/hqdefault.jpg`}
                     alt={item.title}
-                    className="theater-yt-fallback__thumb"
+                    className="theater-not-downloaded__thumb"
                   />
-                  <a
-                    href={`https://www.youtube.com/watch?v=${item.video_id}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="theater-yt-fallback__btn"
-                  >
-                    ▶ {t('watchOnYouTube')}
-                  </a>
-                </div>
-              ) : (
-                // Waiting for token response
-                <div className="theater-loading">
-                  <span className="spinner-sm" />
+                  <div className="theater-not-downloaded__actions">
+                    {!readOnly && (
+                      <button
+                        className="btn-primary theater-not-downloaded__download"
+                        onClick={() => { setTheater(false); handleDownload() }}
+                        disabled={downloadStatus === 'downloading'}
+                      >
+                        ⬇ {t('video.downloadToWatch')}
+                      </button>
+                    )}
+                    <a
+                      href={`https://www.youtube.com/watch?v=${item.video_id}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="theater-not-downloaded__external"
+                    >
+                      ↗ {t('watchOnYouTube')}
+                    </a>
+                  </div>
                 </div>
               )}
             </div>

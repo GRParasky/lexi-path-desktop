@@ -99,6 +99,9 @@
     "removeVideo": "Supprimer cette vidéo ?",
     "yesDelete": "Oui, supprimer",
     "watchOnYouTube": "Regarder sur YouTube",
+    "dashOnlyMessage": "Cette vidéo ne peut être lue qu'après téléchargement. Téléchargez-la maintenant pour la regarder hors ligne.",
+    "downloadToWatch": "Télécharger et regarder",
+    "localFileError": "Impossible de lire le fichier local. Essayez de supprimer et de retélécharger la vidéo.",
     "editVideo": "Modifier le titre / l'URL",
     "invalidUrl": "URL YouTube invalide"
   },

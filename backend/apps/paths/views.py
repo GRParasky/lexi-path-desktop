@@ -4,7 +4,7 @@ import uuid
 from pathlib import Path
 
 from django.core.cache import cache
-from django.http import FileResponse, HttpResponse
+from django.http import FileResponse, HttpResponse, StreamingHttpResponse
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
@@ -19,6 +19,67 @@ from .utils import get_videos_dir
 # Cache key helpers — keep key format in one place
 def _progress_key(item_id): return f'download_progress:{item_id}'
 def _token_key(token):      return f'video_token:{token}'
+
+
+# ---------------------------------------------------------------------------
+# yt-dlp bot-detection retry
+# ---------------------------------------------------------------------------
+
+# Browsers yt-dlp can pull cookies from, tried in order of popularity.
+_COOKIE_BROWSERS = ('firefox', 'brave', 'chrome', 'chromium', 'edge', 'opera', 'vivaldi', 'safari')
+
+
+def _is_bot_error(exc: Exception) -> bool:
+    """Return True if the error is retryable with a different browser or cookies."""
+    msg = str(exc).lower()
+    return (
+        'sign in' in msg
+        or 'bot' in msg
+        or 'cookie' in msg          # "could not find … cookies database"
+        or 'could not find' in msg  # browser profile directory missing
+        or 'failed to load' in msg  # CookieLoadError wrapper
+    )
+
+
+def _yt_extract_info(url: str, ydl_opts: dict, *, download: bool = False):
+    """
+    Call yt-dlp extract_info, automatically retrying with browser cookies
+    if YouTube's bot detection triggers.
+
+    On the first call we omit cookies (fast path — most runs won't need them).
+    If we get a bot/sign-in error we iterate through all installed browsers and
+    retry with their cookie stores until one works.  Raises the original
+    exception when no browser succeeds.
+    """
+    import yt_dlp
+
+    # Fast path: try without cookies first
+    last_exc = None
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            return ydl.extract_info(url, download=download)
+    except Exception as exc:
+        if not _is_bot_error(exc):
+            raise  # non-bot error (private video, unavailable, etc.) — surface immediately
+        last_exc = exc  # save before Python's except-as clause deletes the binding
+
+    logger = _yt_logger()
+    logger.warning('Bot detection on %s — retrying with browser cookies', url)
+    for browser in _COOKIE_BROWSERS:
+        try:
+            opts = {**ydl_opts, 'cookiesfrombrowser': (browser,)}
+            with yt_dlp.YoutubeDL(opts) as ydl:
+                result = ydl.extract_info(url, download=download)
+            logger.info('Bot bypass succeeded using %s cookies', browser)
+            return result
+        except Exception as exc:
+            last_exc = exc
+            if not _is_bot_error(exc):
+                raise  # something other than bot detection went wrong
+            # browser not installed or still bot-detected — try next
+            continue
+
+    raise last_exc
 
 
 def _yt_logger():
@@ -222,8 +283,6 @@ def _download_video_task(item_id: int, youtube_url: str, video_id: str) -> None:
     after download and stored in local_file_path, so VideoServeView can serve
     the correct MIME type regardless of whether the file is mp4 or webm.
     """
-    import yt_dlp
-
     videos_dir = get_videos_dir()
     # %(ext)s is filled in by yt-dlp with the real extension after download
     output_template = str(videos_dir / f'{video_id}.%(ext)s')
@@ -279,8 +338,7 @@ def _download_video_task(item_id: int, youtube_url: str, video_id: str) -> None:
     }
 
     try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(youtube_url, download=True)
+        info = _yt_extract_info(youtube_url, ydl_opts, download=True)
 
         # Read the actual extension from the info dict — never assume .mp4
         ext = info.get('ext', 'mp4')
@@ -394,7 +452,7 @@ class VideoTokenView(APIView):
 
     def post(self, request, item_id):
         try:
-            LearningPathItem.objects.get(
+            item = LearningPathItem.objects.get(
                 pk=item_id,
                 learning_path__created_by=request.user,
             )
@@ -403,7 +461,14 @@ class VideoTokenView(APIView):
 
         token = str(uuid.uuid4())
         cache.set(_token_key(token), item_id, timeout=3600)
-        return Response({'token': token})
+
+        # Return the local file path so the Electron renderer can serve it via
+        # the native lexipath:// protocol, bypassing Django for local files.
+        local_path = None
+        if item.local_file_path and Path(item.local_file_path).exists():
+            local_path = item.local_file_path
+
+        return Response({'token': token, 'local_path': local_path})
 
 
 class VideoDiagView(APIView):
@@ -483,8 +548,6 @@ class VideoOnlineStreamView(APIView):
     def get(self, request, item_id):
         import urllib.request
         import urllib.error
-        import yt_dlp
-        from django.http import StreamingHttpResponse
 
         # --- Auth (mirrors VideoServeView: Bearer or ?token=) ---
         token = request.query_params.get('token')
@@ -515,23 +578,15 @@ class VideoOnlineStreamView(APIView):
                 logger = _yt_logger()
 
                 ydl_opts = {
-                    # Explicitly request a single combined A/V format.
-                    # Recent yt-dlp changed 'best' to prefer merged DASH streams
-                    # (bestvideo*+bestaudio), which have no single 'url' key when
-                    # extract_info(download=False) is used — only 'requested_formats'.
-                    # This selector picks the best format that has BOTH audio and
-                    # video in a single file (typically ~360–480p for YouTube).
-                    'format': 'best[acodec!=none][vcodec!=none]/best[acodec!=none]',
-                    # noplaylist: if the URL contains &list=..., extract only the
-                    # specific video (v=...) and ignore the surrounding playlist.
-                    # Without this, yt-dlp returns a playlist dict with 'entries'
-                    # instead of a single video dict with 'url' → 502 Bad Gateway.
+                    # No 'format' key: fetch all available formats so we can
+                    # pick the best combined A/V one manually without yt-dlp
+                    # raising "Requested format is not available" when YouTube
+                    # no longer provides legacy combined streams for a video.
                     'noplaylist': True,
                     'quiet': True,
                     'no_warnings': True,
                 }
-                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                    info = ydl.extract_info(item.youtube_url, download=False)
+                info = _yt_extract_info(item.youtube_url, ydl_opts)
 
                 mime_map = {
                     'mp4': 'video/mp4',
@@ -541,39 +596,57 @@ class VideoOnlineStreamView(APIView):
                 }
                 ext = info.get('ext', 'mp4')
                 http_headers = info.get('http_headers', {})
+                stream_url = None
 
-                # Primary: top-level url (single combined format)
-                stream_url = info.get('url')
+                formats = info.get('formats', [])
 
-                # Fallback A: 'best' still selected a merged format
-                # (requested_formats = [video_fmt, audio_fmt]) — pick first with URL
-                if not stream_url and 'requested_formats' in info:
-                    for fmt in info['requested_formats']:
-                        if fmt.get('url'):
-                            stream_url = fmt['url']
-                            ext = fmt.get('ext', ext)
-                            http_headers = fmt.get('http_headers', http_headers)
-                            break
+                # Priority 1: legacy progressive formats (single combined A/V file).
+                # Format 18 = 360p mp4, format 22 = 720p mp4 — YouTube still
+                # provides these for most videos and they have a direct URL.
+                for fmt_id in ('22', '18'):
+                    fmt = next(
+                        (f for f in formats if f.get('format_id') == fmt_id and f.get('url')),
+                        None,
+                    )
+                    if fmt:
+                        stream_url = fmt['url']
+                        ext = fmt.get('ext', ext)
+                        http_headers = fmt.get('http_headers', http_headers)
+                        break
 
-                # Fallback B: scan formats list for any combined A/V entry
+                # Priority 2: any other combined A/V format, best quality first.
                 if not stream_url:
-                    for fmt in reversed(info.get('formats', [])):
-                        if (fmt.get('url')
-                                and fmt.get('acodec', 'none') != 'none'
-                                and fmt.get('vcodec', 'none') != 'none'):
-                            stream_url = fmt['url']
-                            ext = fmt.get('ext', ext)
-                            http_headers = fmt.get('http_headers', http_headers)
-                            break
+                    combined = [
+                        f for f in formats
+                        if f.get('url')
+                        and f.get('acodec', 'none') != 'none'
+                        and f.get('vcodec', 'none') != 'none'
+                    ]
+                    if combined:
+                        best = max(combined, key=lambda f: (f.get('height') or 0, f.get('tbr') or 0))
+                        stream_url = best['url']
+                        ext = best.get('ext', ext)
+                        http_headers = best.get('http_headers', http_headers)
+
+                # Priority 3: yt-dlp already resolved a top-level url
+                if not stream_url:
+                    stream_url = info.get('url')
 
                 if not stream_url:
+                    # This video only has DASH streams (separate video+audio).
+                    # The browser cannot play them without merging — the user
+                    # must download the video first.
                     logger.error(
-                        'VideoOnlineStreamView: no usable URL in yt-dlp info for item %s. '
-                        'Keys present: %s', item_id, list(info.keys())
+                        'VideoOnlineStreamView: no combined A/V format for item %s '
+                        '(DASH-only video). formats count: %d',
+                        item_id, len(formats),
                     )
                     return Response(
-                        {'detail': 'Could not extract stream URL: no URL in yt-dlp response.'},
-                        status=status.HTTP_502_BAD_GATEWAY,
+                        {
+                            'type': 'no_combined_format',
+                            'detail': 'This video is only available in DASH streams and cannot be played directly. Download it first.',
+                        },
+                        status=status.HTTP_422_UNPROCESSABLE_ENTITY,
                     )
 
                 stream_info = {
@@ -692,6 +765,18 @@ class VideoServeView(APIView):
         }
         content_type = mime_map.get(ext, 'video/mp4')
 
+        def _stream_range(filepath, start, length, chunk=512 * 1024):
+            """Yield the requested byte range in 512 KB chunks."""
+            remaining = length
+            with open(filepath, 'rb') as fh:
+                fh.seek(start)
+                while remaining > 0:
+                    data = fh.read(min(chunk, remaining))
+                    if not data:
+                        break
+                    remaining -= len(data)
+                    yield data
+
         if range_header:
             match = re.match(r'bytes=(\d+)-(\d*)', range_header)
             if match:
@@ -700,10 +785,8 @@ class VideoServeView(APIView):
                 end = min(end, file_size - 1)
                 length = end - start + 1
 
-                f = open(file_path, 'rb')
-                f.seek(start)
-                response = HttpResponse(
-                    f.read(length),
+                response = StreamingHttpResponse(
+                    _stream_range(file_path, start, length),
                     status=206,
                     content_type=content_type,
                 )
