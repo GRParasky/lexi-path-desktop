@@ -4,6 +4,18 @@ All notable changes to LexiPath Desktop are documented here.
 
 ---
 
+## [1.1.1] — 2026-03-29
+
+### Fixed
+- **SSL certificate errors in the packaged app** — all HTTPS connections (yt-dlp stream extraction, downloads) failed with `CERTIFICATE_VERIFY_FAILED` inside the PyInstaller bundle. The bundled Python interpreter has no access to system CA certificates. Fixed by adding `certifi` as a dependency and pointing Python's SSL stack to its bundled `cacert.pem` at startup, before any network code runs.
+
+### Technical notes
+- `backend/requirements.txt`: added `certifi`
+- `backend/run_server.py`: added `_configure_ssl()` — called as the first thing in `main()`, sets `SSL_CERT_FILE` and `REQUESTS_CA_BUNDLE` to `certifi.where()`; uses `setdefault` so it is a no-op in dev mode where the OS already provides certificates
+- `backend/lexi-path-server.spec`: added `collect_data_files('certifi')` so the `cacert.pem` bundle is included in the PyInstaller output directory; without this `certifi.where()` would point to a path that does not exist inside the frozen binary
+
+---
+
 ## [1.1.0] — 2026-03-29
 
 ### Added
