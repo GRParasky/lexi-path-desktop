@@ -4,6 +4,19 @@ All notable changes to LexiPath Desktop are documented here.
 
 ---
 
+## [1.0.8] — 2026-03-29
+
+### Fixed
+- **Online video streaming and downloads working again** — both the in-app video player and the offline download feature were failing with a silent error. Root cause: recent yt-dlp changed the meaning of `format='best'` to prefer merged DASH streams (`bestvideo*+bestaudio`). When yt-dlp is called with `download=False` (streaming), merged formats have no single direct URL in the response — triggering a 502. Fixed by using an explicit format selector that requires a single combined A/V file.
+
+### Technical notes
+- Format selector changed from `'best'` to `'best[acodec!=none][vcodec!=none]/best[acodec!=none]'` in `VideoOnlineStreamView` — filters to formats where both audio and video codecs are present in a single file (typically ~360–480p for YouTube)
+- Added three-level URL extraction fallback: (1) `info['url']` (single format), (2) `info['requested_formats'][0]['url']` (merged fallback), (3) scan `info['formats']` for any combined A/V entry
+- 502 response body now includes the actual yt-dlp exception message — visible in browser dev tools Network tab for future diagnosis
+- `_download_video_task` also gets proper exception logging with full traceback via Django's logger
+
+---
+
 ## [1.0.7] — 2026-03-28
 
 ### Fixed
