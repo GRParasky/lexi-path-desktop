@@ -2,6 +2,11 @@
   "name": "lexi-path-desktop",
   "version": "1.0.0",
   "description": "LexiPath — offline learning path desktop app",
+  "homepage": "https://github.com/GRParasky/lexi-path-desktop",
+  "author": {
+    "name": "Gabriel Parasky",
+    "email": "grparasky@gmail.com"
+  },
   "main": "main.js",
   "scripts": {
     "start": "electron .",
