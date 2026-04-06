@@ -1,13 +1,33 @@
 name: Build & Release
 
 # Runs on every version tag push (e.g. git tag v1.0.1 && git push origin v1.0.1)
+# Can also be triggered manually via workflow_dispatch to rebuild a specific OS.
 on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      os:
+        description: 'Platform to build (all = all platforms)'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - ubuntu-latest
+          - windows-latest
+          - macos-latest
 
 jobs:
   build:
+    # When triggered by tag push, inputs.os is '' → all matrix entries run.
+    # When triggered by workflow_dispatch, only the selected OS runs.
+    if: >-
+      inputs.os == '' ||
+      inputs.os == 'all' ||
+      inputs.os == matrix.os
+
     strategy:
       fail-fast: false   # if one OS fails, keep building the other two
       matrix:
