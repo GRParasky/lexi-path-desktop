@@ -23,6 +23,20 @@ export default function PathPage() {
   const [togglingPublic, setTogglingPublic] = useState(false)
   const [copied, setCopied] = useState(false)
 
+  // Export
+  const handleExport = async () => {
+    const { data } = await client.get(`/paths/${id}/export/`, { responseType: 'blob' })
+    const safe = (path?.title || 'lexipath').replace(/[^\w\s-]/g, '').trim().replace(/\s+/g, '_') || 'lexipath'
+    const url = URL.createObjectURL(data)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${safe}.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
   // Clone dialog state
   const [showCloneDialog, setShowCloneDialog] = useState(false)
   const [cloneName, setCloneName] = useState('')
@@ -254,6 +268,9 @@ export default function PathPage() {
           )}
         </div>
         <div className="path-header__actions">
+          <button className="btn-ghost" onClick={handleExport}>
+            {t('path.export')}
+          </button>
           <button className="btn-ghost" onClick={() => setShowSharePanel((v) => !v)}>
             {t('path.share')}
           </button>

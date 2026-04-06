@@ -21,13 +21,28 @@
     "public": "Public",
     "videoCount_one": "{{count}} vidéo",
     "videoCount_other": "{{count}} vidéos",
+    "exportAll": "Tout exporter",
+    "import": "Importer",
     "empty": {
       "title": "Votre parcours d'apprentissage commence ici",
       "description": "Créez votre premier parcours et commencez à rassembler des vidéos YouTube dans un flux concentré et sans distractions.",
       "cta": "+ Créer mon premier parcours"
     }
   },
+  "import": {
+    "title": "Importer des Parcours d'Apprentissage",
+    "subtitle_one": "{{count}} parcours trouvé dans ce fichier.",
+    "subtitle_other": "{{count}} parcours trouvés dans ce fichier.",
+    "conflictWarning": "Les parcours suivants existent déjà. Choisissez comment traiter chacun :",
+    "replace": "Remplacer l'existant",
+    "duplicate": "Conserver les deux (renommer)",
+    "newName": "Nouveau nom",
+    "newNamePlaceholder": "Saisir un nouveau nom",
+    "confirm": "Importer",
+    "importing": "Importation…"
+  },
   "path": {
+    "export": "Exporter",
     "back": "← Accueil",
     "clickToEdit": "Cliquer pour modifier",
     "addDescription": "Ajouter une description…",

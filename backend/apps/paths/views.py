@@ -258,6 +258,162 @@ class LearningPathViewSet(viewsets.ModelViewSet):
 
         return Response({'status': 'ok'})
 
+    # -------------------------------------------------------------------------
+    # Export / Import
+    # -------------------------------------------------------------------------
+
+    @staticmethod
+    def _serialize_path_for_export(path):
+        return {
+            'title': path.title,
+            'description': path.description or '',
+            'items': [
+                {
+                    'title': item.title,
+                    'youtube_url': item.youtube_url,
+                    'video_id': item.video_id,
+                    'thumbnail_url': item.thumbnail_url or '',
+                    'position': item.position,
+                }
+                for item in sorted(path.items.all(), key=lambda i: i.position)
+            ],
+        }
+
+    @action(detail=True, methods=['get'], permission_classes=[IsAuthenticated])
+    def export(self, request, pk=None):
+        """Export a single path as a downloadable JSON file."""
+        import json
+        from datetime import datetime, timezone as tz
+
+        path = self.get_object()
+        payload = {
+            'lexipath_export_version': '1.0',
+            'exported_at': datetime.now(tz.utc).isoformat(),
+            'paths': [self._serialize_path_for_export(path)],
+        }
+        safe_title = re.sub(r'[^\w\s-]', '', path.title).strip().replace(' ', '_') or 'lexipath'
+        response = HttpResponse(
+            json.dumps(payload, ensure_ascii=False, indent=2),
+            content_type='application/json',
+        )
+        response['Content-Disposition'] = f'attachment; filename="{safe_title}.json"'
+        return response
+
+    @action(detail=False, methods=['get'], url_path='export-all', permission_classes=[IsAuthenticated])
+    def export_all(self, request):
+        """Export all paths belonging to the current user as a downloadable JSON file."""
+        import json
+        from datetime import datetime, timezone as tz
+
+        paths = self.get_queryset()
+        payload = {
+            'lexipath_export_version': '1.0',
+            'exported_at': datetime.now(tz.utc).isoformat(),
+            'paths': [self._serialize_path_for_export(p) for p in paths],
+        }
+        response = HttpResponse(
+            json.dumps(payload, ensure_ascii=False, indent=2),
+            content_type='application/json',
+        )
+        response['Content-Disposition'] = 'attachment; filename="lexipath-export.json"'
+        return response
+
+    @action(detail=False, methods=['post'], url_path='import/preview', permission_classes=[IsAuthenticated])
+    def import_preview(self, request):
+        """
+        Parse an uploaded export file and return its paths + any title conflicts
+        with the current user's existing paths.  No data is written.
+        """
+        import json
+
+        file = request.FILES.get('file')
+        if not file:
+            return Response({'detail': 'No file provided.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            data = json.loads(file.read())
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            return Response({'detail': 'Invalid JSON file.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if 'paths' not in data or not isinstance(data['paths'], list):
+            return Response({'detail': 'Invalid export format.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        incoming = data['paths']
+        existing_titles = set(
+            LearningPath.objects.filter(created_by=request.user).values_list('title', flat=True)
+        )
+        conflicts = [
+            p['title'] for p in incoming
+            if isinstance(p, dict) and p.get('title') in existing_titles
+        ]
+        return Response({'paths': incoming, 'conflicts': conflicts})
+
+    @action(detail=False, methods=['post'], url_path='import', permission_classes=[IsAuthenticated])
+    def import_paths(self, request):
+        """
+        Import paths from a previously parsed export payload.
+
+        Body:
+          paths       — list of path objects (same shape as export)
+          resolutions — dict keyed by original title:
+                        { action: 'replace' | 'duplicate', new_title?: str }
+        Paths with unresolved conflicts are silently skipped.
+        """
+        from django.db import transaction
+
+        paths = request.data.get('paths', [])
+        resolutions = request.data.get('resolutions', {})
+
+        if not paths:
+            return Response({'detail': 'No paths to import.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        existing_titles = set(
+            LearningPath.objects.filter(created_by=request.user).values_list('title', flat=True)
+        )
+
+        created = []
+        with transaction.atomic():
+            for path_data in paths:
+                if not isinstance(path_data, dict):
+                    continue
+                title = path_data.get('title', '').strip()
+                if not title:
+                    continue
+
+                if title in existing_titles:
+                    resolution = resolutions.get(title, {})
+                    action_type = resolution.get('action')
+                    if action_type == 'replace':
+                        LearningPath.objects.filter(created_by=request.user, title=title).delete()
+                    elif action_type == 'duplicate':
+                        title = resolution.get('new_title', f'{title} (imported)').strip()
+                    else:
+                        continue  # conflict with no resolution — skip
+
+                path_obj = LearningPath.objects.create(
+                    created_by=request.user,
+                    title=title,
+                    description=path_data.get('description', ''),
+                )
+                items_data = path_data.get('items', [])
+                LearningPathItem.objects.bulk_create([
+                    LearningPathItem(
+                        learning_path=path_obj,
+                        position=item.get('position', i),
+                        title=item.get('title', ''),
+                        youtube_url=item.get('youtube_url', ''),
+                        video_id=item.get('video_id', ''),
+                        thumbnail_url=item.get('thumbnail_url', ''),
+                    )
+                    for i, item in enumerate(items_data)
+                    if isinstance(item, dict)
+                ])
+
+                fresh = LearningPath.objects.prefetch_related('items').get(pk=path_obj.pk)
+                created.append(LearningPathSerializer(fresh).data)
+
+        return Response({'imported': created}, status=status.HTTP_201_CREATED)
+
 
 class LearningPathItemViewSet(viewsets.ModelViewSet):
     serializer_class = LearningPathItemSerializer

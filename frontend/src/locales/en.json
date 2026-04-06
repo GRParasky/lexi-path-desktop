@@ -21,13 +21,28 @@
     "public": "Public",
     "videoCount_one": "{{count}} video",
     "videoCount_other": "{{count}} videos",
+    "exportAll": "Export all",
+    "import": "Import",
     "empty": {
       "title": "Your learning journey starts here",
       "description": "Create your first path and start collecting YouTube videos into a focused, distraction-free flow.",
       "cta": "+ Create your first path"
     }
   },
+  "import": {
+    "title": "Import Learning Paths",
+    "subtitle_one": "{{count}} path found in this file.",
+    "subtitle_other": "{{count}} paths found in this file.",
+    "conflictWarning": "The following paths already exist. Choose how to handle each:",
+    "replace": "Replace existing",
+    "duplicate": "Keep both (rename)",
+    "newName": "New name",
+    "newNamePlaceholder": "Enter a new name",
+    "confirm": "Import",
+    "importing": "Importing…"
+  },
   "path": {
+    "export": "Export",
     "back": "← Dashboard",
     "clickToEdit": "Click to edit",
     "addDescription": "Add a description…",

@@ -21,13 +21,28 @@
     "public": "Público",
     "videoCount_one": "{{count}} vídeo",
     "videoCount_other": "{{count}} vídeos",
+    "exportAll": "Exportar tudo",
+    "import": "Importar",
     "empty": {
       "title": "Sua jornada de aprendizado começa aqui",
       "description": "Crie seu primeiro caminho e comece a reunir vídeos do YouTube em um fluxo focado, sem distrações.",
       "cta": "+ Criar meu primeiro caminho"
     }
   },
+  "import": {
+    "title": "Importar Caminhos de Aprendizado",
+    "subtitle_one": "{{count}} caminho encontrado neste arquivo.",
+    "subtitle_other": "{{count}} caminhos encontrados neste arquivo.",
+    "conflictWarning": "Os seguintes caminhos já existem. Escolha como tratar cada um:",
+    "replace": "Substituir existente",
+    "duplicate": "Manter os dois (renomear)",
+    "newName": "Novo nome",
+    "newNamePlaceholder": "Digite um novo nome",
+    "confirm": "Importar",
+    "importing": "Importando…"
+  },
   "path": {
+    "export": "Exportar",
     "back": "← Início",
     "clickToEdit": "Clique para editar",
     "addDescription": "Adicionar uma descrição…",

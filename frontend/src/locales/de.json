@@ -21,13 +21,28 @@
     "public": "Öffentlich",
     "videoCount_one": "{{count}} Video",
     "videoCount_other": "{{count}} Videos",
+    "exportAll": "Alle exportieren",
+    "import": "Importieren",
     "empty": {
       "title": "Deine Lernreise beginnt hier",
       "description": "Erstelle deinen ersten Pfad und beginne, YouTube-Videos in einem fokussierten, ablenkungsfreien Fluss zu sammeln.",
       "cta": "+ Ersten Pfad erstellen"
     }
   },
+  "import": {
+    "title": "Lernpfade importieren",
+    "subtitle_one": "{{count}} Pfad in dieser Datei gefunden.",
+    "subtitle_other": "{{count}} Pfade in dieser Datei gefunden.",
+    "conflictWarning": "Die folgenden Pfade existieren bereits. Wähle, wie du mit jedem umgehst:",
+    "replace": "Vorhandenen ersetzen",
+    "duplicate": "Beide behalten (umbenennen)",
+    "newName": "Neuer Name",
+    "newNamePlaceholder": "Neuen Namen eingeben",
+    "confirm": "Importieren",
+    "importing": "Wird importiert…"
+  },
   "path": {
+    "export": "Exportieren",
     "back": "← Startseite",
     "clickToEdit": "Zum Bearbeiten klicken",
     "addDescription": "Beschreibung hinzufügen…",

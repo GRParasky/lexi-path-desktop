@@ -21,13 +21,28 @@
     "public": "Público",
     "videoCount_one": "{{count}} video",
     "videoCount_other": "{{count}} videos",
+    "exportAll": "Exportar todo",
+    "import": "Importar",
     "empty": {
       "title": "Tu viaje de aprendizaje comienza aquí",
       "description": "Crea tu primera ruta y empieza a recopilar vídeos de YouTube en un flujo enfocado y sin distracciones.",
       "cta": "+ Crear mi primera ruta"
     }
   },
+  "import": {
+    "title": "Importar Rutas de Aprendizaje",
+    "subtitle_one": "{{count}} ruta encontrada en este archivo.",
+    "subtitle_other": "{{count}} rutas encontradas en este archivo.",
+    "conflictWarning": "Las siguientes rutas ya existen. Elige cómo tratar cada una:",
+    "replace": "Reemplazar existente",
+    "duplicate": "Conservar ambas (renombrar)",
+    "newName": "Nuevo nombre",
+    "newNamePlaceholder": "Introduce un nuevo nombre",
+    "confirm": "Importar",
+    "importing": "Importando…"
+  },
   "path": {
+    "export": "Exportar",
     "back": "← Inicio",
     "clickToEdit": "Clic para editar",
     "addDescription": "Añadir una descripción…",

@@ -1,8 +1,20 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import client from '../api/client'
 import LanguageSelector from '../components/LanguageSelector'
+import ImportModal from '../components/ImportModal'
+
+function triggerDownload(blob, filename) {
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}
 
 export default function DashboardPage() {
   const [paths, setPaths] = useState([])
@@ -10,6 +22,11 @@ export default function DashboardPage() {
   const [creating, setCreating] = useState(false)
   const [newTitle, setNewTitle] = useState('')
   const [showForm, setShowForm] = useState(false)
+
+  // Import state
+  const [importModalData, setImportModalData] = useState(null)  // { paths, conflicts }
+  const [importing, setImporting] = useState(false)
+  const fileInputRef = useRef()
 
   const navigate = useNavigate()
   const { t } = useTranslation()
@@ -19,6 +36,39 @@ export default function DashboardPage() {
       .then((res) => setPaths(res.data))
       .finally(() => setLoading(false))
   }, [])
+
+  const handleExportAll = async () => {
+    const { data } = await client.get('/paths/export-all/', { responseType: 'blob' })
+    triggerDownload(data, 'lexipath-export.json')
+  }
+
+  const handleImportFileChange = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    e.target.value = ''
+
+    const formData = new FormData()
+    formData.append('file', file)
+
+    const { data } = await client.post('/paths/import/preview/', formData)
+
+    if (data.conflicts.length === 0) {
+      await doImport(data.paths, {})
+    } else {
+      setImportModalData(data)
+    }
+  }
+
+  const doImport = async (importPaths, resolutions) => {
+    setImporting(true)
+    try {
+      const { data } = await client.post('/paths/import/', { paths: importPaths, resolutions })
+      setPaths((prev) => [...prev, ...data.imported])
+      setImportModalData(null)
+    } finally {
+      setImporting(false)
+    }
+  }
 
   const handleCreate = async (e) => {
     e.preventDefault()
@@ -46,10 +96,27 @@ export default function DashboardPage() {
       <main className="dashboard-main">
         <div className="section-header">
           <h2>{t('dashboard.title')}</h2>
-          <button onClick={() => setShowForm((v) => !v)} className="btn-primary">
-            {showForm ? t('common.cancel') : t('dashboard.newPath')}
-          </button>
+          <div className="section-header__actions">
+            <button className="btn-ghost" onClick={() => fileInputRef.current.click()}>
+              {t('dashboard.import')}
+            </button>
+            <button className="btn-ghost" onClick={handleExportAll}>
+              {t('dashboard.exportAll')}
+            </button>
+            <button onClick={() => setShowForm((v) => !v)} className="btn-primary">
+              {showForm ? t('common.cancel') : t('dashboard.newPath')}
+            </button>
+          </div>
         </div>
+
+        {/* Hidden file input for import */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".json"
+          style={{ display: 'none' }}
+          onChange={handleImportFileChange}
+        />
 
         {showForm && (
           <form onSubmit={handleCreate} className="create-form">
@@ -103,6 +170,16 @@ export default function DashboardPage() {
           </div>
         )}
       </main>
+
+      {importModalData && (
+        <ImportModal
+          paths={importModalData.paths}
+          conflicts={importModalData.conflicts}
+          importing={importing}
+          onConfirm={(resolutions) => doImport(importModalData.paths, resolutions)}
+          onCancel={() => setImportModalData(null)}
+        />
+      )}
     </div>
   )
 }
