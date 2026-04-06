@@ -52,6 +52,9 @@
       "category": "Education",
       "description": "Offline learning path app — watch YouTube videos organized into paths, even without internet"
     },
+    "pacman": {
+      "depends": ["gtk3", "nss", "libxss", "libnotify"]
+    },
 
     "nsis": {
       "oneClick": false,
