@@ -20,18 +20,31 @@ on:
           - macos-latest
 
 jobs:
-  build:
-    # When triggered by tag push, inputs.os is '' → all matrix entries run.
-    # When triggered by workflow_dispatch, only the selected OS runs.
-    if: >-
-      inputs.os == '' ||
-      inputs.os == 'all' ||
-      inputs.os == matrix.os
+  # ---------------------------------------------------------------------------
+  # Setup: determines which OSes to build.
+  # On tag push → all three. On workflow_dispatch → only the selected one.
+  # ---------------------------------------------------------------------------
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Determine build matrix
+        id: set-matrix
+        run: |
+          OS="${{ inputs.os }}"
+          if [ -z "$OS" ] || [ "$OS" = "all" ]; then
+            echo 'matrix=["windows-latest","macos-latest","ubuntu-latest"]' >> $GITHUB_OUTPUT
+          else
+            echo "matrix=[\"$OS\"]" >> $GITHUB_OUTPUT
+          fi
 
+  build:
+    needs: setup
     strategy:
       fail-fast: false   # if one OS fails, keep building the other two
       matrix:
-        os: [windows-latest, macos-latest, ubuntu-latest]
+        os: ${{ fromJson(needs.setup.outputs.matrix) }}
 
     runs-on: ${{ matrix.os }}
 
@@ -126,11 +139,11 @@ jobs:
           npx electron-builder --publish always --config.extraMetadata.version=$VERSION
 
   # ---------------------------------------------------------------------------
-  # Finalize: runs after ALL three build jobs succeed.
+  # Finalize: runs after all build jobs succeed (including partial workflow_dispatch runs).
   # Sets a user-friendly release description and publishes the draft.
   # ---------------------------------------------------------------------------
   finalize:
-    needs: build
+    needs: [setup, build]
     runs-on: ubuntu-latest
     steps:
       - name: Publish release with download instructions
