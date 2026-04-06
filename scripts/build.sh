@@ -23,12 +23,21 @@
 
 set -euo pipefail  # exit on error, treat unset vars as errors, fail on pipe errors
 
+# Parse flags
+SEED=false
+for arg in "$@"; do
+    case $arg in
+        --seed) SEED=true ;;
+    esac
+done
+
 # Resolve the project root regardless of where the script is called from
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 echo ""
 echo "=== LexiPath build starting ==="
 echo "    Project root: $ROOT"
+[[ "$SEED" == true ]] && echo "    Dev seed:     enabled (--seed)"
 echo ""
 
 # ---------------------------------------------------------------------------
@@ -88,6 +97,21 @@ echo "--- [5/5] Packaging Electron app ---"
 cd "$ROOT/electron"
 npm run build
 echo "    Done: electron/dist/"
+
+# ---------------------------------------------------------------------------
+# Step 6 (optional) — Seed dev data
+# ---------------------------------------------------------------------------
+if [[ "$SEED" == true ]]; then
+    echo ""
+    echo "--- [6/5] Seeding dev data ---"
+    cd "$ROOT/backend"
+    if [ -f "venv/bin/activate" ]; then
+        source venv/bin/activate
+    fi
+    SECRET_KEY="dev-seed-placeholder" \
+    APP_DATA_DIR="$HOME/.local/share/LexiPath" \
+        python manage.py seed_dev
+fi
 
 # ---------------------------------------------------------------------------
 # Summary
