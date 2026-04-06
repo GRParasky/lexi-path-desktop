@@ -65,9 +65,9 @@ jobs:
       # -------------------------------------------------------------------------
       # Step 4 — PyInstaller
       # -------------------------------------------------------------------------
-      - name: Install UPX (Linux only)
+      - name: Install Linux build tools
         if: runner.os == 'Linux'
-        run: sudo apt-get install -y upx-ucl
+        run: sudo apt-get install -y upx-ucl libarchive-tools
 
       - name: Bundle Python backend (PyInstaller)
         env:
