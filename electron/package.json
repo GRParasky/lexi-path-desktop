@@ -42,8 +42,10 @@
       "icon": "assets/icon.icns"
     },
     "linux": {
-      "target": "AppImage",
-      "icon": "assets/icon.png"
+      "target": ["AppImage", "deb", "pacman"],
+      "icon": "assets/icon.png",
+      "category": "Education",
+      "description": "Offline learning path app — watch YouTube videos organized into paths, even without internet"
     },
 
     "nsis": {
