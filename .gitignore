@@ -221,7 +221,12 @@ electron/dist/
 # Local video downloads (user data, never committed)
 backend/videos/
 
+# Mockups
+mockups/
+
 # Claude files
 CLAUDE.md
 context.md
-docs/raw_logs
+Tech Lead.md
+project context.md
+docs/
