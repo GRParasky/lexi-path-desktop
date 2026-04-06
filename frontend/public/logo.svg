@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="220" height="56" fill="none" viewBox="0 0 220 56">
+  <defs>
+    <linearGradient id="iconGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#863bff"/>
+      <stop offset="100%" stop-color="#7e14ff"/>
+    </linearGradient>
+    <linearGradient id="shineGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ede6ff" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#47bfff" stop-opacity="0.18"/>
+    </linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="2.5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Lightning bolt icon (scaled from favicon, centered in 56x56) -->
+  <g filter="url(#glow)" transform="translate(4, 5) scale(0.97)">
+    <path fill="url(#iconGrad)"
+      d="M31.2 1.5c.9 0 1.4 1 .9 1.75L24.8 13.1c-1 1.45 0 3.47 1.78 3.47h11c.91 0 1.43 1.05.86 1.77L22.6 34.2v9.55c0 1.04-1.32 1.5-1.96.68L6.35 28.1c-.89-1.13 0-2.75 1.4-2.75H18.6c.89 0 1.41-1.01.89-1.73L10.15 11.3c-.88-1.15 0-2.75 1.4-2.75H31.2z"/>
+    <!-- Shine overlay -->
+    <path fill="url(#shineGrad)"
+      d="M31.2 1.5c.9 0 1.4 1 .9 1.75L24.8 13.1c-1 1.45 0 3.47 1.78 3.47h11c.91 0 1.43 1.05.86 1.77L22.6 34.2v9.55c0 1.04-1.32 1.5-1.96.68L6.35 28.1c-.89-1.13 0-2.75 1.4-2.75H18.6c.89 0 1.41-1.01.89-1.73L10.15 11.3c-.88-1.15 0-2.75 1.4-2.75H31.2z"/>
+  </g>
+
+  <!-- Wordmark -->
+  <text
+    x="56"
+    y="38"
+    font-family="'Segoe UI', 'SF Pro Display', 'Inter', 'Helvetica Neue', Arial, sans-serif"
+    font-size="28"
+    font-weight="700"
+    letter-spacing="-0.5"
+    fill="#1a1a2e">
+    <tspan fill="#1a1a2e">Lexi</tspan><tspan fill="#863bff">Path</tspan>
+  </text>
+</svg>
