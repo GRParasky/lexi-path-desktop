@@ -50,7 +50,9 @@ export default function DashboardPage() {
     const formData = new FormData()
     formData.append('file', file)
 
-    const { data } = await client.post('/paths/import/preview/', formData)
+    const { data } = await client.post('/paths/import/preview/', formData, {
+      headers: { 'Content-Type': undefined },
+    })
 
     if (data.conflicts.length === 0) {
       await doImport(data.paths, {})
