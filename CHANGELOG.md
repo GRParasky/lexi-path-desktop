@@ -4,6 +4,84 @@ All notable changes to LexiPath Desktop are documented here.
 
 ---
 
+## [1.1.4] — 2026-04-06
+
+### Fixed
+- **Import file upload failing silently** — the `/paths/import/preview/` endpoint received an empty `FILES` dict because axios was setting `Content-Type: application/json` over the multipart form data, stripping the boundary parameter. Fixed by passing `{ headers: { 'Content-Type': undefined } }` so the browser sets the correct `multipart/form-data; boundary=…` header automatically.
+
+### Technical notes
+- `frontend/src/pages/DashboardPage.jsx`: `Content-Type: undefined` on the import preview POST
+
+---
+
+## [1.1.3] — 2026-04-06
+
+### Changed
+- Updated `.gitignore`
+
+---
+
+## [1.1.2] — 2026-04-06
+
+### Added
+
+#### Export / Import Learning Paths
+- **Export a single path** — a new "Export" button on each path page downloads a `.json` file containing the path's metadata (title, description, and all video items with their YouTube URLs, IDs, and thumbnails). No progress data or local files are included.
+- **Export all paths** — a new "Export all" button on the dashboard downloads a single `.json` file containing every path belonging to the user.
+- **Import paths from file** — a new "Import" button on the dashboard opens a file picker. The selected `.json` file is sent to the backend for a conflict-free preview before any data is written.
+- **Conflict resolution modal** — if the imported file contains paths whose titles already exist, an `ImportModal` dialog lists each conflict with two options: "Replace existing" (the old path is deleted and replaced) or "Keep both (rename)" (the imported path is created under a new name supplied by the user). The Confirm button is disabled until every conflict has been resolved.
+- **No-conflict fast path** — imports with no title conflicts skip the modal entirely and apply immediately.
+- Export format: `{ lexipath_export_version, exported_at, paths: [{ title, description, items: [{ title, youtube_url, video_id, thumbnail_url, position }] }] }`
+
+#### Linux start menu integration
+- **Automatic `.desktop` file on Linux** — the electron-builder Linux target now produces three artefacts: `AppImage` (universal, no install required), `.deb` (Ubuntu / Debian / Mint), and `.pacman` (Arch / Manjaro). Installing the `.deb` or `.pacman` package registers LexiPath in the system application menu automatically — no manual `.desktop` configuration needed, as was required before.
+
+#### Logo
+- **LexiPath logo SVG** — `frontend/public/logo.svg`: 220×56 px wide-format logo combining the lightning-bolt icon (purple gradient `#863bff → #7e14ff` with glow filter) and the "LexiPath" wordmark ("Lexi" in dark, "Path" in brand purple).
+
+### Fixed
+- **`.deb` package rejected at install** — electron-builder requires `author.name` and `author.email` in `package.json` to populate the `Maintainer:` field of the Debian control file. Without them the generated `.deb` was technically malformed. Fixed by adding `author` and `homepage` fields to `electron/package.json`.
+- **`.pacman` package missing runtime dependencies** — the Arch package was not declaring `gtk3`, `nss`, `libxss`, and `libnotify` as dependencies, causing the app to fail to launch on minimal Arch/Manjaro installs. Added `pacman.depends` array to the electron-builder config.
+- **CI: `libarchive-tools` missing on Ubuntu runner** — the step that installs `.pacman` test packages requires `libarchive-tools` (for `bsdtar`), which is not pre-installed on the GitHub Actions `ubuntu-latest` image. Added `apt-get install -y libarchive-tools` to the Linux build step.
+- **CI: `apt-get install` failing without prior `update`** — package lists on the runner were stale, causing `apt-get install` to fail with "Unable to locate package". Added `apt-get update` before every `apt-get install` step.
+
+### CI improvements
+- **Per-OS manual builds** — the GitHub Actions workflow now accepts a `workflow_dispatch` trigger with an `os` input (choice: `all` / `ubuntu-latest` / `windows-latest` / `macos-latest`). When triggered by a tag push, all three platforms build as before. When triggered manually with a specific OS, only that matrix entry runs — the other two are skipped but count as success so the `finalize` job is not blocked.
+- **Dynamic matrix via `setup` job** — the matrix is computed at runtime by a dedicated `setup` job that outputs a JSON array based on the `os` input. This replaces the previous approach of using an `if:` condition on the build job, which did not correctly handle the `inputs.os == ''` case on tag-triggered runs.
+
+### Technical notes
+
+**Backend (`backend/apps/paths/views.py`)**
+- `_serialize_path_for_export(path)` — static helper that serialises a `LearningPath` instance to the export dict format
+- `export` action (`detail=True`, `GET /api/paths/{id}/export/`) — serialises a single path and returns it as a downloadable JSON attachment; filename derived from the path title (non-word chars stripped)
+- `export_all` action (`detail=False`, `GET /api/paths/export-all/`) — serialises all paths for the current user into a single downloadable JSON attachment
+- `import_preview` action (`detail=False`, `POST /api/paths/import/preview/`) — parses the uploaded file, validates format, and returns `{ paths, conflicts }` without writing anything
+- `import_paths` action (`detail=False`, `POST /api/paths/import/`) — performs the import inside a single `transaction.atomic()`; accepts `resolutions` dict keyed by original title with `action: 'replace' | 'duplicate'` and optional `new_title`; paths with unresolved conflicts are silently skipped
+
+**Frontend**
+- `frontend/src/components/ImportModal.jsx` (new) — conflict resolution dialog; renders one row per conflicting title with Replace / Duplicate radio options; Duplicate reveals a name input; Confirm disabled until all conflicts are addressed
+- `frontend/src/pages/DashboardPage.jsx` — added `handleExportAll`, `handleImportFileChange`, `doImport`; hidden `<input type="file" accept=".json">` wired to a `useRef`; `ImportModal` rendered conditionally
+- `frontend/src/pages/PathPage.jsx` — added `handleExport` and "Export" button alongside Share/Clone/Delete
+
+**Locales (all 6: `en`, `pt-BR`, `es`, `de`, `it`, `fr`)**
+- `dashboard.exportAll`, `dashboard.import` — button labels
+- `path.export` — button label on path page
+- `import.*` namespace — title, subtitle (pluralised), conflict warning, replace/duplicate labels, new-name input placeholder, confirm button, importing spinner text
+
+**Electron (`electron/package.json`)**
+- `linux.target` changed from `["AppImage"]` to `["AppImage", "deb", "pacman"]`
+- `linux.category: "Education"` and `linux.description` added — used by electron-builder when generating the `.desktop` file for `.deb` and `.pacman` packages
+- `author` (`name`, `email`) and `homepage` added — required for valid `.deb` `Maintainer:` field
+- `pacman.depends` added: `["gtk3", "nss", "libxss", "libnotify"]`
+
+**CI (`.github/workflows/build.yml`)**
+- `apt-get update` before each `apt-get install` step
+- `libarchive-tools` added to the Linux install step
+- `workflow_dispatch` trigger with `os` input
+- `setup` job outputs dynamic matrix JSON consumed by the `build` job
+
+---
+
 ## [1.1.1] — 2026-03-29
 
 ### Fixed
