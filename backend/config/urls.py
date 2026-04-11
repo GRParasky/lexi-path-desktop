@@ -32,6 +32,7 @@ urlpatterns = [
     path('api/auth/', include('apps.users.urls')),
     path('api/', include('apps.paths.urls')),
     path('api/progress/', include('apps.progress.urls')),
+    path('api/', include('apps.notebooks.urls')),
 
     # SPA catch-all — must be last so API and admin routes take priority.
     # re_path('') matches any URL not already matched above.

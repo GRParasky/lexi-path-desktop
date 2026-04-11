@@ -12,6 +12,10 @@ class LearningPathItemSerializer(serializers.ModelSerializer):
     # or the YouTube embed — download_status alone isn't enough because
     # the file could have been deleted manually by the user.
     has_local_file = serializers.SerializerMethodField()
+    # ID of the NotebookPage for this item, or null if none exists yet.
+    # Lets the frontend show the correct notebook icon state on every card
+    # without a separate request.
+    notebook_page_id = serializers.SerializerMethodField()
 
     class Meta:
         model = LearningPathItem
@@ -19,11 +23,20 @@ class LearningPathItemSerializer(serializers.ModelSerializer):
             'id', 'title', 'youtube_url', 'video_id',
             'thumbnail_url', 'position', 'created_at',
             'download_status', 'has_local_file', 'download_error',
+            'notebook_page_id',
         )
-        read_only_fields = ('video_id', 'thumbnail_url', 'created_at', 'download_status', 'has_local_file', 'download_error')
+        read_only_fields = ('video_id', 'thumbnail_url', 'created_at', 'download_status', 'has_local_file', 'download_error', 'notebook_page_id')
 
     def get_has_local_file(self, obj) -> bool:
         return bool(obj.local_file_path and Path(obj.local_file_path).exists())
+
+    def get_notebook_page_id(self, obj):
+        # notebook_page is the reverse OneToOne accessor. Accessing it on an item
+        # without a page raises RelatedObjectDoesNotExist (subclass of AttributeError).
+        try:
+            return obj.notebook_page.id
+        except Exception:
+            return None
 
     def validate_youtube_url(self, value):
         """

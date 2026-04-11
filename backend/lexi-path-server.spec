@@ -39,9 +39,10 @@ datas += collect_data_files('certifi')
 # They are plain .py files but PyInstaller only auto-includes imported modules,
 # not files it discovers dynamically. We include them explicitly.
 datas += [
-    ('apps/users/migrations',    'apps/users/migrations'),
-    ('apps/paths/migrations',    'apps/paths/migrations'),
-    ('apps/progress/migrations', 'apps/progress/migrations'),
+    ('apps/users/migrations',     'apps/users/migrations'),
+    ('apps/paths/migrations',     'apps/paths/migrations'),
+    ('apps/progress/migrations',  'apps/progress/migrations'),
+    ('apps/notebooks/migrations', 'apps/notebooks/migrations'),
 ]
 
 # Built React frontend — only present after `npm run build && collectstatic`.
@@ -116,6 +117,13 @@ hiddenimports = [
     'apps.progress.urls',
     'apps.progress.admin',
     'apps.progress.apps',
+    'apps.notebooks',
+    'apps.notebooks.models',
+    'apps.notebooks.views',
+    'apps.notebooks.serializers',
+    'apps.notebooks.urls',
+    'apps.notebooks.admin',
+    'apps.notebooks.apps',
     # Django config package
     'config',
     'config.settings',
