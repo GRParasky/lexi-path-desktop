@@ -133,5 +133,26 @@
   },
   "progress": {
     "complete": "{{percentage}}% abgeschlossen"
+  },
+  "notebook": {
+    "sidebarTitle": "Notizbücher",
+    "newNotebook": "+ Neues Notizbuch",
+    "notebookPlaceholder": "Name des Notizbuchs",
+    "create": "Erstellen",
+    "noPages": "Noch keine Seiten",
+    "emptyHint": "Noch keine Notizbücher. Erstelle eines, um Notizen zu machen.",
+    "openNotes": "Notizen öffnen",
+    "addToNotebook": "Notizen hinzufügen",
+    "openNotebook": "Notizen",
+    "saving": "Speichern…",
+    "saved": "Gespeichert ✓",
+    "backToContent": "Zurück",
+    "normalText": "Normal",
+    "deletePage": "Seite löschen",
+    "confirmDelete": "Diese Seite löschen?",
+    "notesPlaceholder": "Beginne mit deinen Notizen…",
+    "pickNotebook": "Notizbuch wählen",
+    "expandSidebar": "Erweitern",
+    "collapseSidebar": "Einklappen"
   }
 }

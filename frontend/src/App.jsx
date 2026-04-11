@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import useAuthStore from './store/authStore'
+import AppLayout from './components/AppLayout'
 import DashboardPage from './pages/DashboardPage'
 import PathPage from './pages/PathPage'
 import SharedPathPage from './pages/SharedPathPage'
@@ -11,8 +12,6 @@ export default function App() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const initializing = useAuthStore((s) => s.initializing)
 
-  // On first load: restore an existing session or auto-login transparently.
-  // The user never sees a login screen — this is a single-user desktop app.
   useEffect(() => {
     if (isAuthenticated) {
       fetchMe()
@@ -21,14 +20,16 @@ export default function App() {
     }
   }, [])
 
-  // Show nothing while the session is being established to avoid
-  // a flash of unauthenticated content or a spurious redirect.
   if (initializing) return null
 
   return (
     <Routes>
-      <Route path="/dashboard" element={<DashboardPage />} />
-      <Route path="/paths/:id" element={<PathPage />} />
+      {/* AppLayout renders the notebook sidebar + Outlet for nested pages */}
+      <Route element={<AppLayout />}>
+        <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/paths/:id" element={<PathPage />} />
+      </Route>
+      {/* SharedPathPage is read-only — no sidebar needed */}
       <Route path="/shared/:token" element={<SharedPathPage />} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>

@@ -133,5 +133,26 @@
   },
   "progress": {
     "complete": "{{percentage}}% terminé"
+  },
+  "notebook": {
+    "sidebarTitle": "Cahiers",
+    "newNotebook": "+ Nouveau cahier",
+    "notebookPlaceholder": "Nom du cahier",
+    "create": "Créer",
+    "noPages": "Aucune page encore",
+    "emptyHint": "Aucun cahier encore. Créez-en un pour commencer à prendre des notes.",
+    "openNotes": "Ouvrir les notes",
+    "addToNotebook": "Ajouter des notes",
+    "openNotebook": "Notes",
+    "saving": "Enregistrement…",
+    "saved": "Enregistré ✓",
+    "backToContent": "Retour",
+    "normalText": "Normal",
+    "deletePage": "Supprimer la page",
+    "confirmDelete": "Supprimer cette page ?",
+    "notesPlaceholder": "Commencez à écrire vos notes…",
+    "pickNotebook": "Choisir un cahier",
+    "expandSidebar": "Développer",
+    "collapseSidebar": "Réduire"
   }
 }

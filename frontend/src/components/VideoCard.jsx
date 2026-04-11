@@ -1,6 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import client from '../api/client'
+import useNotebookStore from '../store/notebookStore'
+
+// Small notepad icon used in the card-actions area
+const NoteIcon = () => (
+  <svg width="11" height="11" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="1.5" y="1.5" width="9" height="9" rx="1.5" stroke="currentColor" strokeWidth="1.3"/>
+    <line x1="3.5" y1="4" x2="8.5" y2="4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+    <line x1="3.5" y1="6" x2="8.5" y2="6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+    <line x1="3.5" y1="8" x2="6.5" y2="8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+  </svg>
+)
 
 // Basic YouTube URL check — mirrors the backend's extract_youtube_video_id logic.
 // Only used for client-side feedback before the request is sent.
@@ -21,6 +32,25 @@ export default function VideoCard({
   isDragOver,
 }) {
   const { t } = useTranslation()
+
+  // Notebook store — used to open/create pages and know the icon state
+  const notebooks = useNotebookStore((s) => s.notebooks)
+  const itemPageMap = useNotebookStore((s) => s.itemPageMap)
+  const openPageByItem = useNotebookStore((s) => s.openPageByItem)
+  const openOrCreatePage = useNotebookStore((s) => s.openOrCreatePage)
+  const createNotebook = useNotebookStore((s) => s.createNotebook)
+
+  // True when this item already has a notebook page (from API or after creation)
+  const hasNotebookPage = !!(itemPageMap[item.id] ?? item.notebook_page_id)
+
+  // Notebook picker state — shown as a card-overlay when user clicks the icon
+  // on an item that has no page yet.
+  const [notebookPickerOpen, setNotebookPickerOpen] = useState(false)
+  const [showNewNotebookInput, setShowNewNotebookInput] = useState(false)
+  const [newNotebookTitle, setNewNotebookTitle] = useState('')
+  const [creatingNotebook, setCreatingNotebook] = useState(false)
+  const [openingPage, setOpeningPage] = useState(false)
+
   const [theater, setTheater] = useState(false)
   const [toggling, setToggling] = useState(false)
 
@@ -83,6 +113,20 @@ export default function VideoCard({
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [cardEditing])
+
+  // Close notebook picker on Escape
+  useEffect(() => {
+    if (!notebookPickerOpen) return
+    const onKey = (e) => {
+      if (e.key === 'Escape') {
+        setNotebookPickerOpen(false)
+        setShowNewNotebookInput(false)
+        setNewNotebookTitle('')
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [notebookPickerOpen])
 
   // Poll the download status every 2 s while a download is in progress.
   // The backend runs yt-dlp in a background thread and updates the model
@@ -190,6 +234,52 @@ export default function VideoCard({
     onEditItem(item.id, { title: value })
   }
 
+  // ── Notebook actions ──────────────────────────────────────────────────────
+
+  const handleNotebookIconClick = async (e) => {
+    e.stopPropagation()
+    if (hasNotebookPage) {
+      await openPageByItem(item.id)
+    } else {
+      setNotebookPickerOpen(true)
+    }
+  }
+
+  const handlePickNotebook = async (notebookId) => {
+    setOpeningPage(true)
+    try {
+      await openOrCreatePage(notebookId, item.id)
+      setNotebookPickerOpen(false)
+    } finally {
+      setOpeningPage(false)
+    }
+  }
+
+  const handleCreateAndOpen = async (e) => {
+    e.preventDefault()
+    if (!newNotebookTitle.trim()) return
+    setCreatingNotebook(true)
+    try {
+      const notebook = await createNotebook(newNotebookTitle.trim())
+      await openOrCreatePage(notebook.id, item.id)
+      setNotebookPickerOpen(false)
+    } finally {
+      setCreatingNotebook(false)
+      setNewNotebookTitle('')
+      setShowNewNotebookInput(false)
+    }
+  }
+
+  // Close theater and open/create notebook page
+  const handleTheaterNotebook = async () => {
+    setTheater(false)
+    if (hasNotebookPage) {
+      await openPageByItem(item.id)
+    } else {
+      setNotebookPickerOpen(true)
+    }
+  }
+
   // ── Card quick-edit actions ────────────────────────────────────────────────
 
   const openCardEdit = (e) => {
@@ -233,7 +323,7 @@ export default function VideoCard({
         className={`video-card ${isCompleted ? 'video-card--done' : ''} ${isDragOver ? 'video-card--drag-over' : ''}`}
         draggable={draggable}
         onClick={() => {
-          if (justDragged.current || cardEditing || cardConfirmDelete) return
+          if (justDragged.current || cardEditing || cardConfirmDelete || notebookPickerOpen) return
           setTheater(true)
         }}
         onDragStart={() => { justDragged.current = false; onDragStart?.() }}
@@ -242,8 +332,8 @@ export default function VideoCard({
         onDrop={(e) => { e.preventDefault(); onDrop?.() }}
         title={draggable ? t('video.dragToReorder') : t('video.openTheater')}
       >
-        {/* Card-level edit / delete-confirm overlay */}
-        {(cardEditing || cardConfirmDelete) && (
+        {/* Card-level overlays: edit / delete-confirm / notebook picker */}
+        {(cardEditing || cardConfirmDelete || notebookPickerOpen) && (
           <div className="card-overlay" onClick={(e) => e.stopPropagation()}>
             {cardEditing ? (
               <form
@@ -271,7 +361,7 @@ export default function VideoCard({
                   </button>
                 </div>
               </form>
-            ) : (
+            ) : cardConfirmDelete ? (
               <div className="card-confirm">
                 <p>{t('video.removeVideo')}</p>
                 <div className="card-confirm-actions">
@@ -282,6 +372,67 @@ export default function VideoCard({
                     {t('common.cancel')}
                   </button>
                 </div>
+              </div>
+            ) : (
+              /* Notebook picker */
+              <div className="nb-picker">
+                <p className="nb-picker-title">{t('notebook.pickNotebook')}</p>
+                {notebooks.length > 0 && (
+                  <div className="nb-picker-list">
+                    {notebooks.map((nb) => (
+                      <button
+                        key={nb.id}
+                        className="nb-picker-item"
+                        onClick={() => handlePickNotebook(nb.id)}
+                        disabled={openingPage}
+                      >
+                        {nb.title}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {showNewNotebookInput ? (
+                  <form className="nb-picker-new-form" onSubmit={handleCreateAndOpen}>
+                    <input
+                      className="card-edit-input"
+                      value={newNotebookTitle}
+                      onChange={(e) => setNewNotebookTitle(e.target.value)}
+                      placeholder={t('notebook.notebookPlaceholder')}
+                      autoFocus
+                    />
+                    <div className="card-edit-actions">
+                      <button
+                        type="submit"
+                        className="btn-primary-sm"
+                        disabled={creatingNotebook || !newNotebookTitle.trim()}
+                      >
+                        {t('notebook.create')}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-ghost-sm"
+                        onClick={() => { setShowNewNotebookInput(false); setNewNotebookTitle('') }}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <button className="nb-picker-new-btn" onClick={() => setShowNewNotebookInput(true)}>
+                    {t('notebook.newNotebook')}
+                  </button>
+                )}
+                <button
+                  className="btn-ghost-sm"
+                  style={{ width: '100%', marginTop: '0.4rem' }}
+                  onClick={() => {
+                    setNotebookPickerOpen(false)
+                    setShowNewNotebookInput(false)
+                    setNewNotebookTitle('')
+                  }}
+                >
+                  {t('common.cancel')}
+                </button>
               </div>
             )}
           </div>
@@ -300,6 +451,13 @@ export default function VideoCard({
           {isCompleted && <span className="card-done-badge">{t('video.doneBadge')}</span>}
           {!readOnly && (
             <div className="card-actions">
+              <button
+                className={`card-action-btn ${hasNotebookPage ? 'card-action-btn--notebook-active' : ''}`}
+                onClick={handleNotebookIconClick}
+                title={t(hasNotebookPage ? 'notebook.openNotes' : 'notebook.addToNotebook')}
+              >
+                <NoteIcon />
+              </button>
               <button
                 className="card-action-btn"
                 onClick={openCardEdit}
@@ -436,6 +594,15 @@ export default function VideoCard({
 
               {!readOnly && (
                 <div className="theater-footer__actions">
+                  {/* Notebook button — closes theater and opens the page editor */}
+                  <button
+                    className={`btn-ghost-sm ${hasNotebookPage ? 'btn-ghost-sm--notebook' : ''}`}
+                    onClick={handleTheaterNotebook}
+                    title={t(hasNotebookPage ? 'notebook.openNotes' : 'notebook.addToNotebook')}
+                  >
+                    {t('notebook.openNotebook')}
+                  </button>
+
                   {/* Offline download controls */}
                   <div className="offline-controls">
                     {downloadStatus === 'none' && (

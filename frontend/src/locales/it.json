@@ -133,5 +133,26 @@
   },
   "progress": {
     "complete": "{{percentage}}% completato"
+  },
+  "notebook": {
+    "sidebarTitle": "Quaderni",
+    "newNotebook": "+ Nuovo quaderno",
+    "notebookPlaceholder": "Nome del quaderno",
+    "create": "Crea",
+    "noPages": "Nessuna pagina ancora",
+    "emptyHint": "Nessun quaderno ancora. Creane uno per iniziare a prendere appunti.",
+    "openNotes": "Apri note",
+    "addToNotebook": "Aggiungi note",
+    "openNotebook": "Note",
+    "saving": "Salvataggio…",
+    "saved": "Salvato ✓",
+    "backToContent": "Indietro",
+    "normalText": "Normale",
+    "deletePage": "Elimina pagina",
+    "confirmDelete": "Eliminare questa pagina?",
+    "notesPlaceholder": "Inizia a scrivere le tue note…",
+    "pickNotebook": "Scegli un quaderno",
+    "expandSidebar": "Espandi",
+    "collapseSidebar": "Comprimi"
   }
 }

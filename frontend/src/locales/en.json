@@ -133,5 +133,26 @@
   },
   "progress": {
     "complete": "{{percentage}}% complete"
+  },
+  "notebook": {
+    "sidebarTitle": "Notebooks",
+    "newNotebook": "+ New notebook",
+    "notebookPlaceholder": "Notebook name",
+    "create": "Create",
+    "noPages": "No pages yet",
+    "emptyHint": "No notebooks yet. Create one to start taking notes.",
+    "openNotes": "Open notes",
+    "addToNotebook": "Add notes",
+    "openNotebook": "Notes",
+    "saving": "Saving…",
+    "saved": "Saved ✓",
+    "backToContent": "Back",
+    "normalText": "Normal",
+    "deletePage": "Delete page",
+    "confirmDelete": "Delete this page?",
+    "notesPlaceholder": "Start writing your notes…",
+    "pickNotebook": "Choose a notebook",
+    "expandSidebar": "Expand",
+    "collapseSidebar": "Collapse"
   }
 }
