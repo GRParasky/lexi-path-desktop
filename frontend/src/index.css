@@ -924,39 +924,95 @@ input:focus { outline: none; border-color: var(--accent); }
   min-width: 48px;
 }
 
-.nb-sidebar-header {
+/* ── Sidebar nav items (Learning Paths, etc.) ───────────────────────────── */
+.nb-nav-item {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0.85rem 0.75rem;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-  gap: 0.5rem;
-}
-
-.nb-sidebar-title {
-  font-size: 0.72rem;
-  font-weight: 600;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  white-space: nowrap;
-  overflow: hidden;
-  flex: 1;
-}
-
-.nb-sidebar-toggle {
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.65rem 0.85rem;
   background: none;
   border: none;
   color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 500;
   cursor: pointer;
-  padding: 0.1rem 0.2rem;
-  font-size: 1rem;
-  line-height: 1;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
   flex-shrink: 0;
-  transition: color 0.15s;
+  transition: color 0.15s, background 0.1s;
+  border-radius: 6px;
+  margin: 0.1rem 0.4rem;
+  width: calc(100% - 0.8rem);
 }
-.nb-sidebar-toggle:hover { color: var(--text); }
+.nb-nav-item:hover { color: var(--text); background: rgba(255,255,255,0.05); }
+
+.nb-nav-item--icon-only {
+  justify-content: center;
+  padding: 0.65rem 0;
+  margin: 0.1rem 0;
+  width: 100%;
+  border-radius: 0;
+}
+
+.nb-nav-icon {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  opacity: 0.75;
+}
+.nb-nav-item:hover .nb-nav-icon { opacity: 1; }
+
+.nb-nav-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nb-sidebar-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 0.3rem 0.6rem;
+  flex-shrink: 0;
+}
+
+/* Notebooks section header (label, not interactive) */
+.nb-section-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.85rem 0.3rem;
+  flex-shrink: 0;
+}
+
+.nb-section-title {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+/* Collapse / expand toggle at the bottom of the sidebar */
+.nb-collapse-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 0.45rem 0;
+  background: none;
+  border: none;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: color 0.15s, background 0.1s;
+}
+.nb-collapse-btn:hover { color: var(--text); background: rgba(255,255,255,0.04); }
 
 .nb-create-btn {
   display: flex;
@@ -1288,6 +1344,7 @@ input:focus { outline: none; border-color: var(--accent); }
   background: rgba(255,255,255,0.04);
   border: 1px solid var(--border);
   border-radius: 8px;
+  color: var(--text);
   cursor: pointer;
   text-align: left;
   transition: border-color 0.15s, background 0.15s;

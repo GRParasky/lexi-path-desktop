@@ -153,6 +153,7 @@
     "notesPlaceholder": "Start writing your notes…",
     "pickNotebook": "Choose a notebook",
     "expandSidebar": "Expand",
-    "collapseSidebar": "Collapse"
+    "collapseSidebar": "Collapse",
+    "learningPaths": "Learning Paths"
   }
 }
