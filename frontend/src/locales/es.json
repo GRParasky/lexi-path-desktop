@@ -154,6 +154,8 @@
     "pickNotebook": "Elige un cuaderno",
     "expandSidebar": "Expandir",
     "collapseSidebar": "Contraer",
-    "learningPaths": "Rutas de Aprendizaje"
+    "learningPaths": "Rutas de Aprendizaje",
+    "emptyPageTitle": "Sin cuadernos aún",
+    "emptyPageDesc": "Crea tu primer cuaderno y empieza a tomar notas sobre tus videos."
   }
 }

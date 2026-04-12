@@ -154,6 +154,8 @@
     "pickNotebook": "Scegli un quaderno",
     "expandSidebar": "Espandi",
     "collapseSidebar": "Comprimi",
-    "learningPaths": "Percorsi di Apprendimento"
+    "learningPaths": "Percorsi di Apprendimento",
+    "emptyPageTitle": "Nessun quaderno ancora",
+    "emptyPageDesc": "Crea il tuo primo quaderno e inizia a prendere appunti sui tuoi video."
   }
 }

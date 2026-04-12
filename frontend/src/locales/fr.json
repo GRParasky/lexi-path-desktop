@@ -154,6 +154,8 @@
     "pickNotebook": "Choisir un cahier",
     "expandSidebar": "Développer",
     "collapseSidebar": "Réduire",
-    "learningPaths": "Parcours d'apprentissage"
+    "learningPaths": "Parcours d'apprentissage",
+    "emptyPageTitle": "Aucun cahier encore",
+    "emptyPageDesc": "Créez votre premier cahier et commencez à prendre des notes sur vos vidéos."
   }
 }

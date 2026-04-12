@@ -154,6 +154,8 @@
     "pickNotebook": "Choose a notebook",
     "expandSidebar": "Expand",
     "collapseSidebar": "Collapse",
-    "learningPaths": "Learning Paths"
+    "learningPaths": "Learning Paths",
+    "emptyPageTitle": "No notebooks yet",
+    "emptyPageDesc": "Create your first notebook and start taking notes on your videos."
   }
 }

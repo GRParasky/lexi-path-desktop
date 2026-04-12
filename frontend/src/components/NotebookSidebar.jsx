@@ -82,10 +82,9 @@ export default function NotebookSidebar() {
 
         <div className="nb-sidebar-divider" />
 
-        {/* Clicking the notebook icon in collapsed mode expands the sidebar */}
         <button
           className="nb-nav-item nb-nav-item--icon-only"
-          onClick={() => setCollapsed(false)}
+          onClick={() => navigate('/notebooks')}
           title={t('notebook.sidebarTitle')}
         >
           <span className="nb-nav-icon"><NotebookIcon /></span>
@@ -111,11 +110,11 @@ export default function NotebookSidebar() {
 
       <div className="nb-sidebar-divider" />
 
-      {/* Notebooks section header */}
-      <div className="nb-section-header">
+      {/* Notebooks section — clicking the header navigates to the notebooks page */}
+      <button className="nb-nav-item" onClick={() => navigate('/notebooks')}>
         <span className="nb-nav-icon"><NotebookIcon /></span>
-        <span className="nb-section-title">{t('notebook.sidebarTitle')}</span>
-      </div>
+        <span className="nb-nav-label">{t('notebook.sidebarTitle')}</span>
+      </button>
 
       {/* Body: create form + accordion list */}
       <div className="nb-sidebar-body">

@@ -154,6 +154,8 @@
     "pickNotebook": "Notizbuch wählen",
     "expandSidebar": "Erweitern",
     "collapseSidebar": "Einklappen",
-    "learningPaths": "Lernpfade"
+    "learningPaths": "Lernpfade",
+    "emptyPageTitle": "Noch keine Notizbücher",
+    "emptyPageDesc": "Erstelle dein erstes Notizbuch und beginne, Notizen zu deinen Videos zu machen."
   }
 }

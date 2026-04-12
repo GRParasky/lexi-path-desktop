@@ -154,6 +154,8 @@
     "pickNotebook": "Escolha um caderno",
     "expandSidebar": "Expandir",
     "collapseSidebar": "Recolher",
-    "learningPaths": "Trilhas de Aprendizado"
+    "learningPaths": "Trilhas de Aprendizado",
+    "emptyPageTitle": "Nenhum caderno ainda",
+    "emptyPageDesc": "Crie seu primeiro caderno e comece a anotar sobre seus vídeos."
   }
 }

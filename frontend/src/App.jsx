@@ -4,6 +4,7 @@ import useAuthStore from './store/authStore'
 import AppLayout from './components/AppLayout'
 import DashboardPage from './pages/DashboardPage'
 import PathPage from './pages/PathPage'
+import NotebooksPage from './pages/NotebooksPage'
 import SharedPathPage from './pages/SharedPathPage'
 
 export default function App() {
@@ -28,6 +29,7 @@ export default function App() {
       <Route element={<AppLayout />}>
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/paths/:id" element={<PathPage />} />
+        <Route path="/notebooks" element={<NotebooksPage />} />
       </Route>
       {/* SharedPathPage is read-only — no sidebar needed */}
       <Route path="/shared/:token" element={<SharedPathPage />} />
