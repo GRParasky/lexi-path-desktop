@@ -17,7 +17,7 @@ class NotebookPageSerializer(serializers.ModelSerializer):
             'content', 'created_at', 'updated_at',
         )
         read_only_fields = (
-            'created_at', 'updated_at',
+            'id', 'notebook', 'created_at', 'updated_at',
             'item_title', 'item_thumbnail', 'item_video_id',
         )
 
