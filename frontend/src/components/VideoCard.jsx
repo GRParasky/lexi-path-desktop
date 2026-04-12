@@ -329,7 +329,7 @@ export default function VideoCard({
         className={`video-card ${isCompleted ? 'video-card--done' : ''} ${isDragOver ? 'video-card--drag-over' : ''}`}
         draggable={draggable}
         onClick={() => {
-          if (justDragged.current || cardEditing || cardConfirmDelete || notebookPickerOpen) return
+          if (justDragged.current || cardEditing || cardConfirmDelete) return
           setTheater(true)
         }}
         onDragStart={() => { justDragged.current = false; onDragStart?.() }}
@@ -338,8 +338,8 @@ export default function VideoCard({
         onDrop={(e) => { e.preventDefault(); onDrop?.() }}
         title={draggable ? t('video.dragToReorder') : t('video.openTheater')}
       >
-        {/* Card-level overlays: edit / delete-confirm / notebook picker */}
-        {(cardEditing || cardConfirmDelete || notebookPickerOpen) && (
+        {/* Card-level overlays: edit / delete-confirm */}
+        {(cardEditing || cardConfirmDelete) && (
           <div className="card-overlay" onClick={(e) => e.stopPropagation()}>
             {cardEditing ? (
               <form
@@ -367,7 +367,7 @@ export default function VideoCard({
                   </button>
                 </div>
               </form>
-            ) : cardConfirmDelete ? (
+            ) : (
               <div className="card-confirm">
                 <p>{t('video.removeVideo')}</p>
                 <div className="card-confirm-actions">
@@ -378,67 +378,6 @@ export default function VideoCard({
                     {t('common.cancel')}
                   </button>
                 </div>
-              </div>
-            ) : (
-              /* Notebook picker */
-              <div className="nb-picker">
-                <p className="nb-picker-title">{t('notebook.pickNotebook')}</p>
-                {notebooks.length > 0 && (
-                  <div className="nb-picker-list">
-                    {notebooks.map((nb) => (
-                      <button
-                        key={nb.id}
-                        className="nb-picker-item"
-                        onClick={() => handlePickNotebook(nb.id)}
-                        disabled={openingPage}
-                      >
-                        {nb.title}
-                      </button>
-                    ))}
-                  </div>
-                )}
-                {showNewNotebookInput ? (
-                  <form className="nb-picker-new-form" onSubmit={handleCreateAndOpen}>
-                    <input
-                      className="card-edit-input"
-                      value={newNotebookTitle}
-                      onChange={(e) => setNewNotebookTitle(e.target.value)}
-                      placeholder={t('notebook.notebookPlaceholder')}
-                      autoFocus
-                    />
-                    <div className="card-edit-actions">
-                      <button
-                        type="submit"
-                        className="btn-primary-sm"
-                        disabled={creatingNotebook || !newNotebookTitle.trim()}
-                      >
-                        {t('notebook.create')}
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-ghost-sm"
-                        onClick={() => { setShowNewNotebookInput(false); setNewNotebookTitle('') }}
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  </form>
-                ) : (
-                  <button className="nb-picker-new-btn" onClick={() => setShowNewNotebookInput(true)}>
-                    {t('notebook.newNotebook')}
-                  </button>
-                )}
-                <button
-                  className="btn-ghost-sm"
-                  style={{ width: '100%', marginTop: '0.4rem' }}
-                  onClick={() => {
-                    setNotebookPickerOpen(false)
-                    setShowNewNotebookInput(false)
-                    setNewNotebookTitle('')
-                  }}
-                >
-                  {t('common.cancel')}
-                </button>
               </div>
             )}
           </div>
@@ -673,6 +612,85 @@ export default function VideoCard({
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Notebook picker modal ── */}
+      {notebookPickerOpen && (
+        <div
+          className="theater-backdrop"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setNotebookPickerOpen(false)
+              setShowNewNotebookInput(false)
+              setNewNotebookTitle('')
+            }
+          }}
+        >
+          <div className="nb-picker-modal">
+            <button
+              className="theater-close"
+              onClick={() => {
+                setNotebookPickerOpen(false)
+                setShowNewNotebookInput(false)
+                setNewNotebookTitle('')
+              }}
+            >✕</button>
+
+            <h2 className="nb-picker-modal__title">{t('notebook.pickNotebook')}</h2>
+
+            <div className="nb-picker-modal__list">
+              {notebooks.length === 0 && (
+                <p className="nb-picker-modal__empty">{t('notebook.emptyHint')}</p>
+              )}
+              {notebooks.map((nb) => (
+                <button
+                  key={nb.id}
+                  className="nb-picker-modal__item"
+                  onClick={() => handlePickNotebook(nb.id)}
+                  disabled={openingPage}
+                >
+                  <span className="nb-picker-modal__name">{nb.title}</span>
+                  <span className="nb-picker-modal__count">{nb.pages_count}</span>
+                </button>
+              ))}
+            </div>
+
+            {showNewNotebookInput ? (
+              <form className="nb-picker-modal__new-form" onSubmit={handleCreateAndOpen}>
+                <input
+                  className="nb-picker-modal__new-input"
+                  value={newNotebookTitle}
+                  onChange={(e) => setNewNotebookTitle(e.target.value)}
+                  placeholder={t('notebook.notebookPlaceholder')}
+                  autoFocus
+                />
+                <div className="nb-picker-modal__new-actions">
+                  <button
+                    type="submit"
+                    className="btn-primary-sm"
+                    disabled={creatingNotebook || !newNotebookTitle.trim()}
+                  >
+                    {t('notebook.create')}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-ghost-sm"
+                    onClick={() => { setShowNewNotebookInput(false); setNewNotebookTitle('') }}
+                  >
+                    ✕
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <button
+                className="nb-picker-modal__new-btn"
+                onClick={() => setShowNewNotebookInput(true)}
+              >
+                {t('notebook.newNotebook')}
+              </button>
+            )}
           </div>
         </div>
       )}

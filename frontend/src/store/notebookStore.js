@@ -85,12 +85,22 @@ const useNotebookStore = create((set, get) => ({
   },
 
   // Used when the card already has a page (notebook_page_id is set) — opens it directly.
+  // Also updates itemPageMap so the card icon state is always in sync after this call,
+  // regardless of whether the page was opened from the sidebar or a fresh session.
   openPageByItem: async (itemId) => {
     try {
       const { data } = await client.get(`/notebooks/pages/by-item/${itemId}/`)
-      set({ activePage: data })
+      set((state) => ({
+        activePage: data,
+        itemPageMap: { ...state.itemPageMap, [itemId]: data.id },
+      }))
       return data
     } catch {
+      // Page not found (404) or other error — record that this item has no page so
+      // the card doesn't keep showing the icon as active on future renders.
+      set((state) => ({
+        itemPageMap: { ...state.itemPageMap, [itemId]: null },
+      }))
       return null
     }
   },
@@ -143,8 +153,14 @@ const useNotebookStore = create((set, get) => ({
   },
 
   deletePage: async (notebookId, pageId) => {
-    const { pages } = get()
-    const page = (pages[notebookId] || []).find((p) => p.id === pageId)
+    const { pages, activePage } = get()
+    // Prefer activePage as the source of itemId: it is always set when the editor
+    // is open (the only place deletePage is called from). Fallback to pages[] for
+    // robustness if the page was lazy-loaded via the sidebar accordion.
+    const itemId =
+      activePage?.id === pageId
+        ? activePage.learning_path_item
+        : (pages[notebookId] || []).find((p) => p.id === pageId)?.learning_path_item
     await client.delete(`/notebooks/${notebookId}/pages/${pageId}/`)
     set((state) => {
       const newItemPageMap = { ...state.itemPageMap }
@@ -152,7 +168,7 @@ const useNotebookStore = create((set, get) => ({
       // to distinguish "no page" (null) from "never seen" (key absent). If we delete the
       // key, the card falls back to item.notebook_page_id (the stale server prop) and
       // keeps the icon highlighted after deletion.
-      if (page) newItemPageMap[page.learning_path_item] = null
+      if (itemId != null) newItemPageMap[itemId] = null
       return {
         pages: {
           ...state.pages,
