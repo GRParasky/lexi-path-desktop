@@ -128,9 +128,15 @@ const useNotebookStore = create((set, get) => ({
   savePage: async (content) => {
     const { activePage } = get()
     if (!activePage) return
+    const savedId = activePage.id  // capture before await — activePage may change
     try {
       await client.patch(`/notebooks/${activePage.notebook}/pages/${activePage.id}/`, { content })
-      set({ activePage: { ...activePage, content } })
+      // Re-check after the request completes: if the user deleted this page and opened
+      // a new one while the PATCH was in-flight, activePage.id will have changed.
+      // Overwriting without this check would replace the new page's data with the old one.
+      if (get().activePage?.id === savedId) {
+        set((state) => ({ activePage: { ...state.activePage, content } }))
+      }
     } catch {
       // Silent — next keystroke will retry
     }
