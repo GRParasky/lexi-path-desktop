@@ -142,7 +142,11 @@ const useNotebookStore = create((set, get) => ({
     await client.delete(`/notebooks/${notebookId}/pages/${pageId}/`)
     set((state) => {
       const newItemPageMap = { ...state.itemPageMap }
-      if (page) delete newItemPageMap[page.learning_path_item]
+      // Set to null instead of deleting — the VideoCard checks (item.id in itemPageMap)
+      // to distinguish "no page" (null) from "never seen" (key absent). If we delete the
+      // key, the card falls back to item.notebook_page_id (the stale server prop) and
+      // keeps the icon highlighted after deletion.
+      if (page) newItemPageMap[page.learning_path_item] = null
       return {
         pages: {
           ...state.pages,

@@ -40,8 +40,14 @@ export default function VideoCard({
   const openOrCreatePage = useNotebookStore((s) => s.openOrCreatePage)
   const createNotebook = useNotebookStore((s) => s.createNotebook)
 
-  // True when this item already has a notebook page (from API or after creation)
-  const hasNotebookPage = !!(itemPageMap[item.id] ?? item.notebook_page_id)
+  // True when this item already has a notebook page.
+  // Uses explicit 'in' check to distinguish:
+  //   - key absent → never fetched; fall back to server prop (item.notebook_page_id)
+  //   - key = null  → page was deleted this session; ignore server prop
+  //   - key = id    → page was created/found this session
+  const hasNotebookPage = item.id in itemPageMap
+    ? !!itemPageMap[item.id]
+    : !!item.notebook_page_id
 
   // Notebook picker state — shown as a card-overlay when user clicks the icon
   // on an item that has no page yet.
