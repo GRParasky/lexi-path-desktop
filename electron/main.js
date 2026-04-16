@@ -25,6 +25,14 @@ protocol.registerSchemesAsPrivileged([
 // ----------------------------------------------------------------------------
 // Constants
 // ----------------------------------------------------------------------------
+
+// The window icon must be a real file on disk (not inside app.asar) so the OS
+// can read it. In production, electron-builder copies it to process.resourcesPath
+// via extraResources. In dev, it lives alongside the source files.
+const APP_ICON = app.isPackaged
+  ? path.join(process.resourcesPath, 'icon.png')
+  : path.join(__dirname, 'assets', 'icon.png')
+
 const PORT = 8765
 const PROD_URL = `http://127.0.0.1:${PORT}`
 const DEV_URL  = 'http://localhost:5173'
@@ -171,6 +179,7 @@ function createWindow(url) {
     minWidth: 800,
     minHeight: 600,
     show: false, // don't flash a blank frame — show after content is ready
+    icon: APP_ICON,
     webPreferences: {
       contextIsolation: true,   // default since Electron 12, keep it on
       nodeIntegration: false,   // renderer has no Node.js access (not needed)
@@ -227,6 +236,7 @@ app.whenReady().then(async () => {
       resizable: false,
       center: true,
       show: false,
+      icon: APP_ICON,
       webPreferences: { contextIsolation: true, nodeIntegration: false },
     })
     mainWindow.loadFile(path.join(__dirname, 'loading.html'))

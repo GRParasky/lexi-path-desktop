@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#a066ff"/>
+      <stop offset="100%" stop-color="#6a08e0"/>
+    </linearGradient>
+    <linearGradient id="leftPage" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#f0e8ff"/>
+    </linearGradient>
+    <linearGradient id="rightPage" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#f0e8ff"/>
+      <stop offset="100%" stop-color="#ffffff"/>
+    </linearGradient>
+    <filter id="bookShadow" x="-15%" y="-15%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#3a0060" flood-opacity="0.45"/>
+    </filter>
+  </defs>
+
+  <!-- Fundo quadrado arredondado com gradiente roxo -->
+  <rect width="512" height="512" rx="96" fill="url(#bg)"/>
+
+  <!-- Livro aberto com sombra -->
+  <g filter="url(#bookShadow)">
+
+    <!-- Pagina esquerda -->
+    <path fill="url(#leftPage)"
+      d="M84,116 C84,108 90,100 98,100 L246,94 L246,406 L98,412 C90,414 84,408 84,400 Z"/>
+
+    <!-- Pagina direita -->
+    <path fill="url(#rightPage)"
+      d="M428,116 C428,108 422,100 414,100 L266,94 L266,406 L414,412 C422,414 428,408 428,400 Z"/>
+
+    <!-- Lombada -->
+    <rect x="246" y="94" width="20" height="312" rx="3" fill="#c8b0f8"/>
+
+  </g>
+
+  <!-- Linhas de texto — pagina esquerda -->
+  <g stroke="#7840b0" stroke-width="7" stroke-linecap="round" opacity="0.4">
+    <line x1="112" y1="154" x2="230" y2="148"/>
+    <line x1="112" y1="190" x2="230" y2="184"/>
+    <line x1="112" y1="226" x2="230" y2="220"/>
+    <line x1="112" y1="262" x2="230" y2="256"/>
+    <line x1="112" y1="298" x2="230" y2="292"/>
+    <line x1="112" y1="334" x2="230" y2="328"/>
+    <line x1="112" y1="368" x2="186" y2="363"/>
+  </g>
+
+  <!-- Linhas de texto — pagina direita (espelhada) -->
+  <g stroke="#7840b0" stroke-width="7" stroke-linecap="round" opacity="0.4">
+    <line x1="282" y1="148" x2="400" y2="154"/>
+    <line x1="282" y1="184" x2="400" y2="190"/>
+    <line x1="282" y1="220" x2="400" y2="226"/>
+    <line x1="282" y1="256" x2="400" y2="262"/>
+    <line x1="282" y1="292" x2="400" y2="298"/>
+    <line x1="282" y1="328" x2="400" y2="334"/>
+    <line x1="282" y1="362" x2="326" y2="366"/>
+  </g>
+
+</svg>

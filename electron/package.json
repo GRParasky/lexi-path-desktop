@@ -23,6 +23,7 @@
     "appId": "com.lexipath.desktop",
     "productName": "LexiPath",
     "compression": "maximum",
+    "icon": "assets/icon.png",
 
     "publish": {
       "provider": "github",
@@ -35,6 +36,10 @@
         "from": "../backend/dist/lexi-path-server",
         "to": "backend/lexi-path-server",
         "filter": ["**/*"]
+      },
+      {
+        "from": "assets/icon.png",
+        "to": "icon.png"
       }
     ],
 
