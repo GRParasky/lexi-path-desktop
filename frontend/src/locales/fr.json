@@ -156,6 +156,9 @@
     "collapseSidebar": "Réduire",
     "learningPaths": "Parcours d'apprentissage",
     "emptyPageTitle": "Aucun cahier encore",
-    "emptyPageDesc": "Créez votre premier cahier et commencez à prendre des notes sur vos vidéos."
+    "emptyPageDesc": "Créez votre premier cahier et commencez à prendre des notes sur vos vidéos.",
+    "deleteNotebook": "Supprimer le cahier",
+    "deleteNotebookConfirm": "Supprimer « {{title}} » ?",
+    "deleteNotebookHint": "Toutes les pages de ce cahier seront perdues."
   }
 }

@@ -2,6 +2,16 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import useNotebookStore from '../store/notebookStore'
 
+// Trash icon used on the hover-reveal delete button (top-right of each card)
+const TrashIcon = () => (
+  <svg width="13" height="13" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path
+      d="M2 3h8M4.5 3V2a1 1 0 011-1h1a1 1 0 011 1v1M3 3l.5 7a1 1 0 001 1h3a1 1 0 001-1L9 3"
+      stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"
+    />
+  </svg>
+)
+
 export default function NotebooksPage() {
   const { t } = useTranslation()
 
@@ -11,10 +21,15 @@ export default function NotebooksPage() {
   const toggleExpanded = useNotebookStore((s) => s.toggleExpanded)
   const createNotebook = useNotebookStore((s) => s.createNotebook)
   const openPageByItem = useNotebookStore((s) => s.openPageByItem)
+  const deleteNotebook = useNotebookStore((s) => s.deleteNotebook)
 
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [newTitle, setNewTitle]             = useState('')
   const [creating, setCreating]             = useState(false)
+
+  // Inline delete confirmation — one card at a time
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null)
+  const [deletingId, setDeletingId]           = useState(null)
 
   const handleCreate = async (e) => {
     e.preventDefault()
@@ -26,6 +41,16 @@ export default function NotebooksPage() {
       setShowCreateForm(false)
     } finally {
       setCreating(false)
+    }
+  }
+
+  const handleConfirmDelete = async (id) => {
+    setDeletingId(id)
+    try {
+      await deleteNotebook(id)
+      setConfirmDeleteId(null)
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -83,28 +108,72 @@ export default function NotebooksPage() {
             </button>
           </div>
         ) : (
-          <div className="nb-notebooks-list">
+          <div className="nb-notebooks-grid">
             {notebooks.map((notebook) => {
               const isExpanded    = expandedIds.has(notebook.id)
+              const isConfirming  = confirmDeleteId === notebook.id
+              const isDeleting    = deletingId === notebook.id
               const notebookPages = pages[notebook.id] || []
 
+              if (isConfirming) {
+                return (
+                  <div key={notebook.id} className="nb-notebooks-card nb-notebooks-card--confirming">
+                    <div className="nb-notebooks-card__confirm">
+                      <p className="nb-notebooks-card__confirm-text">
+                        {t('notebook.deleteNotebookConfirm', { title: notebook.title })}
+                      </p>
+                      <p className="nb-notebooks-card__confirm-hint">
+                        {t('notebook.deleteNotebookHint')}
+                      </p>
+                      <div className="card-confirm-actions">
+                        <button
+                          className="btn-ghost-sm"
+                          onClick={() => setConfirmDeleteId(null)}
+                          disabled={isDeleting}
+                        >
+                          {t('common.cancel')}
+                        </button>
+                        <button
+                          className="btn-danger-sm"
+                          onClick={() => handleConfirmDelete(notebook.id)}
+                          disabled={isDeleting}
+                        >
+                          {isDeleting ? '…' : t('common.delete')}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )
+              }
+
               return (
-                <div key={notebook.id} className="nb-notebooks-item">
+                <div key={notebook.id} className="nb-notebooks-card">
                   <div
-                    className="nb-notebooks-item__header"
+                    className="nb-notebooks-card__header"
                     onClick={() => toggleExpanded(notebook.id)}
                   >
-                    <span className={`nb-notebooks-item__arrow ${isExpanded ? 'nb-notebooks-item__arrow--open' : ''}`}>
+                    <span className={`nb-notebooks-card__arrow ${isExpanded ? 'nb-notebooks-card__arrow--open' : ''}`}>
                       ›
                     </span>
-                    <span className="nb-notebooks-item__title">{notebook.title}</span>
-                    <span className="nb-notebooks-item__badge">{notebook.pages_count}</span>
+                    <span className="nb-notebooks-card__title" title={notebook.title}>
+                      {notebook.title}
+                    </span>
+                    <span className="nb-notebooks-card__badge">{notebook.pages_count}</span>
+                    <button
+                      type="button"
+                      className="nb-notebooks-card__delete"
+                      onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(notebook.id) }}
+                      title={t('notebook.deleteNotebook')}
+                      aria-label={t('notebook.deleteNotebook')}
+                    >
+                      <TrashIcon />
+                    </button>
                   </div>
 
                   {isExpanded && (
-                    <div className="nb-notebooks-item__pages">
+                    <div className="nb-notebooks-card__pages">
                       {notebookPages.length === 0 ? (
-                        <p className="nb-notebooks-item__empty">{t('notebook.noPages')}</p>
+                        <p className="nb-notebooks-card__empty">{t('notebook.noPages')}</p>
                       ) : (
                         <div className="nb-page-cards">
                           {notebookPages.map((page) => (

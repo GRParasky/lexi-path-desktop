@@ -156,6 +156,9 @@
     "collapseSidebar": "Recolher",
     "learningPaths": "Trilhas de Aprendizado",
     "emptyPageTitle": "Nenhum caderno ainda",
-    "emptyPageDesc": "Crie seu primeiro caderno e comece a anotar sobre seus vídeos."
+    "emptyPageDesc": "Crie seu primeiro caderno e comece a anotar sobre seus vídeos.",
+    "deleteNotebook": "Excluir caderno",
+    "deleteNotebookConfirm": "Excluir \"{{title}}\"?",
+    "deleteNotebookHint": "Todas as páginas deste caderno serão perdidas."
   }
 }

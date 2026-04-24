@@ -156,6 +156,9 @@
     "collapseSidebar": "Contraer",
     "learningPaths": "Rutas de Aprendizaje",
     "emptyPageTitle": "Sin cuadernos aún",
-    "emptyPageDesc": "Crea tu primer cuaderno y empieza a tomar notas sobre tus videos."
+    "emptyPageDesc": "Crea tu primer cuaderno y empieza a tomar notas sobre tus videos.",
+    "deleteNotebook": "Eliminar cuaderno",
+    "deleteNotebookConfirm": "¿Eliminar \"{{title}}\"?",
+    "deleteNotebookHint": "Se perderán todas las páginas de este cuaderno."
   }
 }

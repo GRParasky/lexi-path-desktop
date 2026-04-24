@@ -156,6 +156,9 @@
     "collapseSidebar": "Collapse",
     "learningPaths": "Learning Paths",
     "emptyPageTitle": "No notebooks yet",
-    "emptyPageDesc": "Create your first notebook and start taking notes on your videos."
+    "emptyPageDesc": "Create your first notebook and start taking notes on your videos.",
+    "deleteNotebook": "Delete notebook",
+    "deleteNotebookConfirm": "Delete \"{{title}}\"?",
+    "deleteNotebookHint": "All pages in this notebook will be lost."
   }
 }

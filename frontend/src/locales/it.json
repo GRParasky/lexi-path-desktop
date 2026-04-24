@@ -156,6 +156,9 @@
     "collapseSidebar": "Comprimi",
     "learningPaths": "Percorsi di Apprendimento",
     "emptyPageTitle": "Nessun quaderno ancora",
-    "emptyPageDesc": "Crea il tuo primo quaderno e inizia a prendere appunti sui tuoi video."
+    "emptyPageDesc": "Crea il tuo primo quaderno e inizia a prendere appunti sui tuoi video.",
+    "deleteNotebook": "Elimina quaderno",
+    "deleteNotebookConfirm": "Eliminare \"{{title}}\"?",
+    "deleteNotebookHint": "Tutte le pagine di questo quaderno andranno perse."
   }
 }

@@ -156,6 +156,9 @@
     "collapseSidebar": "Einklappen",
     "learningPaths": "Lernpfade",
     "emptyPageTitle": "Noch keine Notizbücher",
-    "emptyPageDesc": "Erstelle dein erstes Notizbuch und beginne, Notizen zu deinen Videos zu machen."
+    "emptyPageDesc": "Erstelle dein erstes Notizbuch und beginne, Notizen zu deinen Videos zu machen.",
+    "deleteNotebook": "Notizbuch löschen",
+    "deleteNotebookConfirm": "„{{title}}“ löschen?",
+    "deleteNotebookHint": "Alle Seiten in diesem Notizbuch gehen verloren."
   }
 }
